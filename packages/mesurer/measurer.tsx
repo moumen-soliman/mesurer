@@ -2,7 +2,6 @@
 
 import {
   useCallback,
-  useEffect,
   useMemo,
   useRef,
   useState,
@@ -13,7 +12,7 @@ import { MESURER_STYLES } from "./styles.generated";
 import { Toolbar } from "./components/toolbar";
 import { ColorPicker } from "./components/color-picker";
 import { RulersOverlay } from "./components/rulers-overlay";
-import type { SettingsTab } from "./components/settings-panel";
+import { SettingsPanel, type SettingsTab } from "./components/settings-panel";
 import { useColorPicker } from "./hooks/use-color-picker";
 import { useDragState } from "./hooks/use-drag-state";
 import { useGuideDragHold } from "./hooks/use-guide-drag-hold";
@@ -29,6 +28,7 @@ import { useMeasurerHistory } from "./hooks/use-measurer-history";
 import { useMeasurerLocalState } from "./hooks/use-measurer-local-state";
 import { useMeasurerPointer } from "./hooks/use-measurer-pointer";
 import { useOverlayRefs } from "./hooks/use-overlay-refs";
+import { usePersistenceLifecycle } from "./hooks/use-persistence-lifecycle";
 import { useResizeSync } from "./hooks/use-resize-sync";
 import { useRulerGuides } from "./hooks/use-ruler-guides";
 import { useScreenshot } from "./hooks/use-screenshot";
@@ -38,6 +38,7 @@ import { useToolbarIdle } from "./hooks/use-toolbar-idle";
 import { useXray } from "./hooks/use-xray";
 import { MeasurerOverlay } from "./render/measurer-overlay";
 import { settingsTabForContext } from "./core/settings-tab";
+import { createPersistedSetter } from "./core/persisted-setter";
 import type {
   DistanceOverlay,
   Guide,
@@ -160,10 +161,6 @@ function MeasurerClient({
       ? storedState?.workspace ?? null
       : null;
   const persistedSettings = sanitizeStoredSettings(ownerWindow, storedState?.settings ?? {});
-
-  useEffect(() => {
-    return () => activePersistence.setErrorHandler?.(undefined);
-  }, [activePersistence]);
 
   const enabledRef = useRef(false);
   const toolModeRef = useRef<ToolMode>(
@@ -407,31 +404,7 @@ function MeasurerClient({
     settingsScreenshot,
   ]);
 
-  useEffect(() => {
-    if (applyingExternalPersistenceRef.current) {
-      applyingExternalPersistenceRef.current = false;
-      return;
-    }
-    persistSettings();
-    if (settingsPersistOnReload) persistState();
-  }, [persistSettings, persistState, settingsPersistOnReload]);
-
-  useEffect(() => {
-    if (!settingsPersistOnReload) return;
-    const handleBeforeUnload = () => saveWorkspace();
-    ownerWindow.addEventListener("beforeunload", handleBeforeUnload);
-    return () => {
-      ownerWindow.removeEventListener("beforeunload", handleBeforeUnload);
-      if (workspacePersistTimeoutRef.current !== null) {
-        ownerWindow.clearTimeout(workspacePersistTimeoutRef.current);
-        workspacePersistTimeoutRef.current = null;
-        saveWorkspace();
-      }
-    };
-  }, [ownerWindow, saveWorkspace, settingsPersistOnReload]);
-
   const clearPersistedWorkspace = useCallback(() => {
-    enabledRef.current = false;
     toolModeRef.current = "none";
     rulersVisibleRef.current = false;
     xrayVisibleRef.current = false;
@@ -516,40 +489,26 @@ function MeasurerClient({
     }, 0);
   }, [applyPersistedWorkspace, guideStyleDefault, ownerWindow, rulerSettingsDefault, setMultiMeasureEnabled, setSelectNewGuideEnabled, setSettingsColorClickFormat, setSettingsColorFormats, setSettingsGuideColor, setSettingsHighlightColor, setSettingsHoverHighlight, setSettingsPersistOnReload, setSnapEnabled, setSnapGuidesEnabled, settingsPersistOnReload]);
 
-  const previousPersistenceRef = useRef(activePersistence);
-  useEffect(() => {
-    if (previousPersistenceRef.current === activePersistence) return;
-    previousPersistenceRef.current = activePersistence;
-    applyPersistenceSnapshot(storedState);
-  }, [activePersistence, applyPersistenceSnapshot, storedState]);
-
-  useEffect(() => {
-    const unsubscribe = activePersistence.subscribe?.(applyPersistenceSnapshot);
-    return unsubscribe;
-  }, [activePersistence, applyPersistenceSnapshot]);
+  usePersistenceLifecycle({
+    ownerWindow,
+    activePersistence,
+    persistSettings,
+    persistState,
+    settingsPersistOnReload,
+    saveWorkspace,
+    applyPersistenceSnapshot,
+    storedState,
+    applyingExternalPersistenceRef,
+    workspacePersistTimeoutRef,
+  });
 
   const setEnabledPersisted = useCallback(
-    (value: Parameters<typeof setEnabled>[0]) => {
-      const next = typeof value === "function" ? value(enabledRef.current) : value;
-      if (Object.is(next, enabledRef.current)) return;
-      enabledRef.current = next;
-      setEnabled(next);
-      persistState();
-    },
+    createPersistedSetter(enabledRef, setEnabled, persistState),
     [persistState, setEnabled],
   );
 
   const setRulersVisiblePersisted = useCallback(
-    (value: Parameters<typeof setRulersVisible>[0]) => {
-      const next =
-        typeof value === "function"
-          ? value(rulersVisibleRef.current)
-          : value;
-      if (Object.is(next, rulersVisibleRef.current)) return;
-      rulersVisibleRef.current = next;
-      setRulersVisible(next);
-      persistState();
-    },
+    createPersistedSetter(rulersVisibleRef, setRulersVisible, persistState),
     [persistState, setRulersVisible],
   );
 
@@ -570,75 +529,32 @@ function MeasurerClient({
   );
 
   const setGuideOrientationPersisted = useCallback(
-    (value: Parameters<typeof setGuideOrientation>[0]) => {
-      const next =
-        typeof value === "function" ? value(guideOrientationRef.current) : value;
-      if (Object.is(next, guideOrientationRef.current)) return;
-      guideOrientationRef.current = next;
-      setGuideOrientation(next);
-      persistState();
-    },
+    createPersistedSetter(guideOrientationRef, setGuideOrientation, persistState),
     [persistState, setGuideOrientation],
   );
 
   const setMeasurementsPersisted = useCallback(
-    (value: Parameters<typeof setMeasurements>[0]) => {
-      const next =
-        typeof value === "function" ? value(measurementsRef.current) : value;
-      if (Object.is(next, measurementsRef.current)) return;
-      measurementsRef.current = next;
-      setMeasurements(next);
-      persistState();
-    },
+    createPersistedSetter(measurementsRef, setMeasurements, persistState),
     [persistState, setMeasurements],
   );
 
   const setActiveMeasurementPersisted = useCallback(
-    (value: Parameters<typeof setActiveMeasurement>[0]) => {
-      const next =
-        typeof value === "function"
-          ? value(activeMeasurementRef.current)
-          : value;
-      if (Object.is(next, activeMeasurementRef.current)) return;
-      activeMeasurementRef.current = next;
-      setActiveMeasurement(next);
-      persistState();
-    },
+    createPersistedSetter(activeMeasurementRef, setActiveMeasurement, persistState),
     [persistState, setActiveMeasurement],
   );
 
   const setHeldDistancesPersisted = useCallback(
-    (value: Parameters<typeof setHeldDistances>[0]) => {
-      const next =
-        typeof value === "function" ? value(heldDistancesRef.current) : value;
-      if (Object.is(next, heldDistancesRef.current)) return;
-      heldDistancesRef.current = next;
-      setHeldDistances(next);
-      persistState();
-    },
+    createPersistedSetter(heldDistancesRef, setHeldDistances, persistState),
     [persistState, setHeldDistances],
   );
 
   const setGuidesPersisted = useCallback(
-    (value: Parameters<typeof setGuides>[0]) => {
-      const next = typeof value === "function" ? value(guidesRef.current) : value;
-      if (Object.is(next, guidesRef.current)) return;
-      guidesRef.current = next;
-      setGuides(next);
-      persistState();
-    },
+    createPersistedSetter(guidesRef, setGuides, persistState),
     [persistState, setGuides],
   );
 
   const setSelectedGuideIdsPersisted = useCallback(
-    (value: Parameters<typeof setSelectedGuideIds>[0]) => {
-      const next =
-        typeof value === "function" ? value(selectedGuideIdsRef.current) : value;
-      if (Object.is(next, selectedGuideIdsRef.current)) return;
-      selectedGuideIdsRef.current = next;
-      setSelectedGuideIds(next);
-      persistState();
-    },
+    createPersistedSetter(selectedGuideIdsRef, setSelectedGuideIds, persistState),
     [persistState, setSelectedGuideIds],
   );
 
@@ -1064,43 +980,53 @@ function MeasurerClient({
         enabled={enabled}
         interactive={overlayInteractive}
         toolMode={toolMode}
-        guidePointerEvents={overlayInteractive && (toolMode !== "none" || rulersVisible)}
         guidesEnabled={guidesEnabled}
         altPressed={altPressed}
         isDragging={isDragging}
-        displayedMeasurements={displayedMeasurements}
-        measurementEdgeVisibility={measurementEdgeVisibility}
-        activeRect={activeRect}
-        activeWidth={activeWidth}
-        activeHeight={activeHeight}
         fillColor={fillColor}
         outlineColor={outlineColor}
-        hoverRectToShow={hoverRectToShow}
-        hoverEdgeVisibility={hoverEdgeVisibility}
-        guidePreview={guidePreview}
-        guideColorPreview={guideColorPreview}
-        displayedSelectedMeasurements={displayedSelectedMeasurements}
-        selectedEdgeVisibility={selectedEdgeVisibility}
-        heldDistances={heldDistances}
-        optionPairOverlay={optionPairOverlay}
-        guideDistanceOverlay={guideDistanceOverlay}
-        optionContainerLines={optionContainerLines}
-        guides={overlayGuides}
-        hoverGuide={hoverGuide}
-        draggingGuideId={draggingGuideId}
-        selectedGuideIds={selectedGuideIds}
-        guideColorActive={guideColorActive}
-        guideColorHover={guideColorHover}
-        guideColorDefault={guideColorDefault}
-        guideStyle={settingsGuideStyle}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerLeave={handlePointerLeave}
-        onRemoveHeldDistance={removeHeldDistance}
-        onGuidePointerDown={handleGuidePointerDown}
-        onGuidePointerUp={handleGuidePointerUp}
-        onGuidePointerCancel={handleGuidePointerUp}
+        pointers={{
+          onPointerDown: handlePointerDown,
+          onPointerMove: handlePointerMove,
+          onPointerUp: handlePointerUp,
+          onPointerLeave: handlePointerLeave,
+        }}
+        selection={{
+          measurements: displayedMeasurements,
+          measurementEdges: measurementEdgeVisibility,
+          activeRect,
+          activeWidth,
+          activeHeight,
+          hoverRect: hoverRectToShow,
+          hoverEdges: hoverEdgeVisibility,
+          selected: displayedSelectedMeasurements,
+          selectedEdges: selectedEdgeVisibility,
+        }}
+        distances={{
+          held: heldDistances,
+          optionPair: optionPairOverlay,
+          guideDistance: guideDistanceOverlay,
+          containerLines: optionContainerLines,
+          onRemoveHeld: removeHeldDistance,
+        }}
+        guides={{
+          items: overlayGuides,
+          selectedIds: selectedGuideIds,
+          hover: hoverGuide,
+          draggingId: draggingGuideId,
+          style: settingsGuideStyle,
+          pointerEvents: overlayInteractive && (toolMode !== "none" || rulersVisible),
+          colors: {
+            active: guideColorActive,
+            hover: guideColorHover,
+            default: guideColorDefault,
+            preview: guideColorPreview,
+          },
+          preview: guidePreview,
+          onPointerDown: handleGuidePointerDown,
+          onPointerUp: handleGuidePointerUp,
+          onPointerCancel: handleGuidePointerUp,
+        }}
       />
 
       <ColorPicker
@@ -1126,59 +1052,86 @@ function MeasurerClient({
       <Toolbar
         ref={toolbarRef}
         eventTarget={ownerWindow}
-        toolMode={toolMode}
-        setEnabled={setEnabledWithHistory}
-        setToolMode={setToolModeWithHistory}
-        xrayVisible={xrayVisible}
-        setXrayVisible={setXrayVisible}
-        rulersVisible={rulersVisible}
-        setRulersVisible={setRulersVisiblePersisted}
-        guideOrientation={guideOrientation}
-        setGuideOrientation={setGuideOrientationWithHistory}
         onInteract={() => setToolbarActive(true)}
-        colorPickerActive={colorPicker.active}
-        setColorPickerActive={colorPicker.setActive}
-        onColorPickerClick={openColorPicker}
-        screenshotActive={screenshot.active}
-        onScreenshotClick={screenshot.toggleSelection}
-        onCancelScreenshot={screenshot.closeUi}
-        settingsOpen={settingsOpen}
-        setSettingsOpen={setSettingsOpen}
-        highlightColor={settingsHighlightColor}
-        setHighlightColor={setSettingsHighlightColor}
-        guideColor={settingsGuideColor}
-        setGuideColor={setSettingsGuideColor}
-        hoverHighlight={settingsHoverHighlight}
-        setHoverHighlight={setSettingsHoverHighlight}
-        persistOnReload={settingsPersistOnReload}
-        setPersistOnReload={setSettingsPersistOnReload}
-        colorPickerFormats={settingsColorFormats}
-        setColorPickerFormats={setSettingsColorFormats}
-        colorPickerClickFormat={settingsColorClickFormat}
-        setColorPickerClickFormat={setSettingsColorClickFormat}
-        snapEnabled={snapEnabled}
-        setSnapEnabled={setSnapEnabled}
-        snapGuidesEnabled={snapGuidesEnabled}
-        setSnapGuidesEnabled={setSnapGuidesEnabled}
-        selectNewGuideEnabled={selectNewGuideEnabled}
-        setSelectNewGuideEnabled={setSelectNewGuideEnabled}
-        multiMeasureEnabled={multiMeasureEnabled}
-        setMultiMeasureEnabled={setMultiMeasureEnabled}
-         guideStyle={settingsGuideStyle}
-         setGuideStyle={setSettingsGuideStyle}
-         rulerSettings={settingsRulerSettings}
-         setRulerSettings={setSettingsRulerSettings}
-         screenshotSettings={settingsScreenshot}
-         setScreenshotSettings={setSettingsScreenshot}
-         settingsTab={settingsTab}
-         setSettingsTab={setSettingsTab}
-         onToggleSettings={toggleSettings}
-         onResetSettings={resetSettings}
-         onClearWorkspace={clearWorkspace}
-         screenshotError={screenshot.error}
-         screenshotPreviewUrl={screenshot.previewUrl}
-         onScreenshotPreviewExited={screenshot.dismissPreview}
-       />
+        tools={{
+          mode: toolMode,
+          setMode: setToolModeWithHistory,
+          setEnabled: setEnabledWithHistory,
+          xrayVisible,
+          setXrayVisible,
+          rulersVisible,
+          setRulersVisible: setRulersVisiblePersisted,
+          guideOrientation,
+          setGuideOrientation: setGuideOrientationWithHistory,
+        }}
+        colorPicker={{
+          active: colorPicker.active,
+          setActive: colorPicker.setActive,
+          onClick: openColorPicker,
+        }}
+        screenshot={{
+          active: screenshot.active,
+          error: screenshot.error,
+          previewUrl: screenshot.previewUrl,
+          copy: settingsScreenshot.copy,
+          download: settingsScreenshot.download,
+          onClick: screenshot.toggleSelection,
+          onCancel: screenshot.closeUi,
+          onPreviewExited: screenshot.dismissPreview,
+        }}
+        settings={{
+          open: settingsOpen,
+          setOpen: setSettingsOpen,
+          onToggle: toggleSettings,
+          panel: (
+            <SettingsPanel
+              ownerWindow={ownerWindow}
+              select={{
+                highlightColor: settingsHighlightColor,
+                setHighlightColor: setSettingsHighlightColor,
+                hoverHighlight: settingsHoverHighlight,
+                setHoverHighlight: setSettingsHoverHighlight,
+                snapEnabled,
+                setSnapEnabled,
+                multiMeasureEnabled,
+                setMultiMeasureEnabled,
+              }}
+              guides={{
+                guideColor: settingsGuideColor,
+                setGuideColor: setSettingsGuideColor,
+                guideStyle: settingsGuideStyle,
+                setGuideStyle: setSettingsGuideStyle,
+                snapGuidesEnabled,
+                setSnapGuidesEnabled,
+                selectNewGuideEnabled,
+                setSelectNewGuideEnabled,
+              }}
+              color={{
+                colorFormats: settingsColorFormats,
+                setColorFormats: setSettingsColorFormats,
+                colorClickFormat: settingsColorClickFormat,
+                setColorClickFormat: setSettingsColorClickFormat,
+              }}
+              camera={{
+                settings: settingsScreenshot,
+                setSettings: setSettingsScreenshot,
+              }}
+              rulers={{
+                settings: settingsRulerSettings,
+                setSettings: setSettingsRulerSettings,
+              }}
+              general={{
+                persistOnReload: settingsPersistOnReload,
+                setPersistOnReload: setSettingsPersistOnReload,
+                onResetSettings: resetSettings,
+                onClearWorkspace: clearWorkspace,
+              }}
+              activeTab={settingsTab}
+              onTabChange={setSettingsTab}
+            />
+          ),
+        }}
+      />
     </div>,
     portalTarget,
   );

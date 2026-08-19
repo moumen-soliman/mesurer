@@ -8,42 +8,61 @@ import { cn } from "../core/utils"
 import { Tooltip, useTooltip } from "./tooltip"
 import type { GuideStyle, RulerSettings, ScreenshotSettings } from "../core/persistence"
 
-type SettingsPanelProps = {
-  ownerWindow: Window
+export type SettingsTab = "guides" | "select" | "color-picker" | "screenshot" | "rulers" | "general"
+
+type SettingsSelectProps = {
   highlightColor: string
   setHighlightColor: Dispatch<SetStateAction<string>>
-  guideColor: string
-  setGuideColor: Dispatch<SetStateAction<string>>
   hoverHighlight: boolean
   setHoverHighlight: Dispatch<SetStateAction<boolean>>
-  persistOnReload: boolean
-  setPersistOnReload: Dispatch<SetStateAction<boolean>>
-  colorFormats: ColorPickerFormat[]
-  setColorFormats: Dispatch<SetStateAction<ColorPickerFormat[]>>
-  colorClickFormat: ColorPickerFormat
-  setColorClickFormat: Dispatch<SetStateAction<ColorPickerFormat>>
   snapEnabled: boolean
   setSnapEnabled: Dispatch<SetStateAction<boolean>>
+  multiMeasureEnabled: boolean
+  setMultiMeasureEnabled: Dispatch<SetStateAction<boolean>>
+}
+
+type SettingsGuidesProps = {
+  guideColor: string
+  setGuideColor: Dispatch<SetStateAction<string>>
+  guideStyle: GuideStyle
+  setGuideStyle: Dispatch<SetStateAction<GuideStyle>>
   snapGuidesEnabled: boolean
   setSnapGuidesEnabled: Dispatch<SetStateAction<boolean>>
   selectNewGuideEnabled: boolean
   setSelectNewGuideEnabled: Dispatch<SetStateAction<boolean>>
-  multiMeasureEnabled: boolean
-  setMultiMeasureEnabled: Dispatch<SetStateAction<boolean>>
-  guideStyle: GuideStyle
-  setGuideStyle: Dispatch<SetStateAction<GuideStyle>>
-  rulerSettings: RulerSettings
-  setRulerSettings: Dispatch<SetStateAction<RulerSettings>>
-  screenshotSettings: ScreenshotSettings
-  setScreenshotSettings: Dispatch<SetStateAction<ScreenshotSettings>>
+}
+
+type SettingsColorProps = {
+  colorFormats: ColorPickerFormat[]
+  setColorFormats: Dispatch<SetStateAction<ColorPickerFormat[]>>
+  colorClickFormat: ColorPickerFormat
+  setColorClickFormat: Dispatch<SetStateAction<ColorPickerFormat>>
+}
+
+type SettingsPanelProps = {
+  ownerWindow: Window
   activeTab: SettingsTab
   onTabChange: (tab: SettingsTab) => void
-  onResetSettings: () => void
-  onClearWorkspace: () => void
+  select: SettingsSelectProps
+  guides: SettingsGuidesProps
+  color: SettingsColorProps
+  camera: {
+    settings: ScreenshotSettings
+    setSettings: Dispatch<SetStateAction<ScreenshotSettings>>
+  }
+  rulers: {
+    settings: RulerSettings
+    setSettings: Dispatch<SetStateAction<RulerSettings>>
+  }
+  general: {
+    persistOnReload: boolean
+    setPersistOnReload: Dispatch<SetStateAction<boolean>>
+    onResetSettings: () => void
+    onClearWorkspace: () => void
+  }
 }
 
 const COLOR_FORMATS: ColorPickerFormat[] = ["hex", "rgb", "hsl", "oklch"]
-export type SettingsTab = "guides" | "select" | "color-picker" | "screenshot" | "rulers" | "general"
 const GUIDE_PATTERNS: Array<{ value: GuideStyle["pattern"]; label: string }> = [
   { value: "solid", label: "Solid" },
   { value: "dashed", label: "Dashed" },
@@ -359,37 +378,44 @@ function ColorField({ label, value, fallback, ownerWindow, onChange }: {
 
 export function SettingsPanel({
   ownerWindow,
-  highlightColor,
-  setHighlightColor,
-  guideColor,
-  setGuideColor,
-  hoverHighlight,
-  setHoverHighlight,
-  persistOnReload,
-  setPersistOnReload,
-  colorFormats,
-  setColorFormats,
-  colorClickFormat,
-  setColorClickFormat,
-  snapEnabled,
-  setSnapEnabled,
-  snapGuidesEnabled,
-  setSnapGuidesEnabled,
-  selectNewGuideEnabled,
-  setSelectNewGuideEnabled,
-  multiMeasureEnabled,
-  setMultiMeasureEnabled,
-  guideStyle,
-  setGuideStyle,
-  rulerSettings,
-  setRulerSettings,
-  screenshotSettings,
-  setScreenshotSettings,
+  select,
+  guides,
+  color,
+  camera,
+  rulers,
+  general,
   activeTab,
   onTabChange,
-  onResetSettings,
-  onClearWorkspace,
 }: SettingsPanelProps) {
+  const { persistOnReload, setPersistOnReload, onResetSettings, onClearWorkspace } = general
+  const { settings: screenshotSettings, setSettings: setScreenshotSettings } = camera
+  const { settings: rulerSettings, setSettings: setRulerSettings } = rulers
+  const {
+    highlightColor,
+    setHighlightColor,
+    hoverHighlight,
+    setHoverHighlight,
+    snapEnabled,
+    setSnapEnabled,
+    multiMeasureEnabled,
+    setMultiMeasureEnabled,
+  } = select
+  const {
+    guideColor,
+    setGuideColor,
+    guideStyle,
+    setGuideStyle,
+    snapGuidesEnabled,
+    setSnapGuidesEnabled,
+    selectNewGuideEnabled,
+    setSelectNewGuideEnabled,
+  } = guides
+  const {
+    colorFormats,
+    setColorFormats,
+    colorClickFormat,
+    setColorClickFormat,
+  } = color
   const toggleFormat = (format: ColorPickerFormat) => {
     setColorFormats((previous) => {
       if (previous.includes(format)) {
