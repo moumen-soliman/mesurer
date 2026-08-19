@@ -69,6 +69,7 @@
 }
 
 .mesurer-toolbar-surface {
+  overflow: visible;
   box-shadow:
     0 0 0.5px rgba(0, 0, 0, 0.18),
     0 3px 8px rgba(0, 0, 0, 0.1),
@@ -94,11 +95,48 @@
 }
 
 .mesurer-screenshot-preview {
-  background: #ececec;
+  pointer-events: none;
+  position: absolute;
+  left: 50%;
+  z-index: 100;
+  width: max-content;
+  max-width: min(200px, calc(100vw - 24px));
+  padding: 4px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #000;
+  transform: translateX(-50%);
+  opacity: 0;
   box-shadow:
-    0 0 0 0.5px rgba(0, 0, 0, 0.12),
-    0 8px 24px rgba(0, 0, 0, 0.16);
+    0 0 0.5px rgba(0, 0, 0, 0.18),
+    0 3px 8px rgba(0, 0, 0, 0.1),
+    0 1px 3px rgba(0, 0, 0, 0.1);
   transition: opacity 160ms;
+}
+
+.mesurer-screenshot-preview[data-visible="true"] {
+  opacity: 1;
+}
+
+.mesurer-screenshot-preview[data-side="bottom"] {
+  top: 100%;
+  margin-top: 8px;
+}
+
+.mesurer-screenshot-preview[data-side="top"] {
+  bottom: 100%;
+  margin-bottom: 8px;
+}
+
+.mesurer-screenshot-preview-image {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 180px;
+  max-height: 120px;
+  border-radius: 5px;
+  background: #fff;
+  object-fit: contain;
 }
 
 @media (prefers-reduced-motion: reduce) {

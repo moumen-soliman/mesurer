@@ -47,10 +47,10 @@ export function ScreenshotPreview({
     <div
       role="status"
       aria-label="Screenshot copied"
+      data-side={side}
+      data-visible={visible && !exiting ? "true" : "false"}
       className={cn(
-        "mesurer-screenshot-preview msr:pointer-events-none msr:absolute msr:left-1/2 msr:z-10 msr:w-max msr:-translate-x-1/2 msr:overflow-hidden msr:rounded-[10px]",
-        side === "bottom" ? "msr:top-full msr:mt-2" : "msr:bottom-full msr:mb-2",
-        visible && !exiting ? "msr:opacity-100" : "msr:opacity-0",
+        "mesurer-screenshot-preview",
         exiting ? "msr:ease-in" : "msr:ease-out",
       )}
       onTransitionEnd={(event) => {
@@ -58,16 +58,7 @@ export function ScreenshotPreview({
         if (exiting) onExited();
       }}
     >
-      <div className="msr:flex msr:h-7 msr:items-center msr:gap-1.5 msr:bg-[#ececec] msr:px-2.5">
-        <span className="msr:size-2.5 msr:rounded-full msr:bg-[#ff5f57]" />
-        <span className="msr:size-2.5 msr:rounded-full msr:bg-[#febc2e]" />
-        <span className="msr:size-2.5 msr:rounded-full msr:bg-[#28c840]" />
-      </div>
-      <img
-        src={url}
-        alt=""
-        className="msr:block msr:max-h-32 msr:max-w-48 msr:bg-white msr:object-contain"
-      />
+      <img src={url} alt="" className="mesurer-screenshot-preview-image" />
     </div>
   );
 }
