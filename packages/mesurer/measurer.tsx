@@ -444,17 +444,18 @@ function MeasurerClient({
     setSettingsRulerSettings({ ...rulerSettingsDefault });
     setSettingsScreenshot({ ...DEFAULT_SCREENSHOT_SETTINGS });
   };
-  const initialSettingsTab: SettingsTab = colorPickerActive
-    ? "color-picker"
-    : rulersVisible
-      ? "rulers"
-      : screenshotActive
-        ? "screenshot"
+  const initialSettingsTab: SettingsTab =
+    screenshotActive || screenshotPreviewUrl
+      ? "screenshot"
+      : colorPickerActive
+        ? "color-picker"
         : toolMode === "guides"
           ? "guides"
           : toolMode === "select" || toolMode === "text-inspector"
             ? "select"
-            : "general";
+            : rulersVisible
+              ? "rulers"
+              : "general";
   const [guideOrientation, setGuideOrientation] = useState<
     "vertical" | "horizontal"
   >(persistedState?.guideOrientation ?? "vertical");
@@ -1137,12 +1138,13 @@ function MeasurerClient({
   }, [ownerWindow, screenshotError]);
 
   const toggleSettings = useCallback(() => {
+    const tab = initialSettingsTab;
     closeScreenshotUi();
     if (settingsOpen) {
       setSettingsOpen(false);
       return;
     }
-    setSettingsTab(initialSettingsTab);
+    setSettingsTab(tab);
     setSettingsOpen(true);
   }, [closeScreenshotUi, initialSettingsTab, settingsOpen]);
 
