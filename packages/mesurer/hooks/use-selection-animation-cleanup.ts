@@ -1,0 +1,80 @@
+import { useEffect, useRef, type Dispatch, type SetStateAction } from "react"
+import { MEASURE_TRANSITION_MS } from "../core/constants"
+import type { InspectMeasurement, Rect } from "../core/types"
+
+type UseSelectionAnimationCleanupOptions = {
+  ownerWindow: Window
+  selectionOriginRect: Rect | null
+  selectedMeasurement: InspectMeasurement | null
+  selectedMeasurements: InspectMeasurement[]
+  setSelectionOriginRect: Dispatch<SetStateAction<Rect | null>>
+  setSelectedMeasurement: Dispatch<SetStateAction<InspectMeasurement | null>>
+  setSelectedMeasurements: Dispatch<SetStateAction<InspectMeasurement[]>>
+}
+
+export const useSelectionAnimationCleanup = ({
+  ownerWindow,
+  selectionOriginRect,
+  selectedMeasurement,
+  selectedMeasurements,
+  setSelectionOriginRect,
+  setSelectedMeasurement,
+  setSelectedMeasurements,
+}: UseSelectionAnimationCleanupOptions) => {
+  const timeoutRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    const hasSelectionAnimationState =
+      !!selectionOriginRect ||
+      !!selectedMeasurement?.originRect ||
+      selectedMeasurements.some((measurement) => !!measurement.originRect)
+
+    if (!hasSelectionAnimationState) {
+      if (timeoutRef.current !== null) {
+        ownerWindow.clearTimeout(timeoutRef.current)
+        timeoutRef.current = null
+      }
+      return
+    }
+
+    if (timeoutRef.current !== null) return
+
+    timeoutRef.current = ownerWindow.setTimeout(() => {
+      timeoutRef.current = null
+
+      setSelectionOriginRect((prev) => (prev ? null : prev))
+
+      setSelectedMeasurement((prev) => {
+        if (!prev?.originRect) return prev
+        const { originRect: _originRect, ...next } = prev
+        return next
+      })
+
+      setSelectedMeasurements((prev) => {
+        let changed = false
+        const next = prev.map((measurement) => {
+          if (!measurement.originRect) return measurement
+          changed = true
+          const { originRect: _originRect, ...rest } = measurement
+          return rest
+        })
+        return changed ? next : prev
+      })
+    }, MEASURE_TRANSITION_MS)
+
+    return () => {
+      if (timeoutRef.current !== null) {
+        ownerWindow.clearTimeout(timeoutRef.current)
+        timeoutRef.current = null
+      }
+    }
+  }, [
+    ownerWindow,
+    selectedMeasurement,
+    selectedMeasurements,
+    selectionOriginRect,
+    setSelectedMeasurement,
+    setSelectedMeasurements,
+    setSelectionOriginRect,
+  ])
+}
