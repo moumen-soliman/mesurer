@@ -883,7 +883,26 @@ function MeasurerClient({
     setSelectedGuideIdsPersisted,
   ]);
 
+  const cancelScreenshotSelection = useCallback(() => {
+    screenshotOriginRef.current = null;
+    setScreenshotRect(null);
+    setScreenshotActive(false);
+  }, []);
+
+  const dismissScreenshotPreview = useCallback(() => {
+    setScreenshotPreviewUrl((previous) => {
+      if (previous) URL.revokeObjectURL(previous);
+      return null;
+    });
+  }, []);
+
+  const closeScreenshotUi = useCallback(() => {
+    cancelScreenshotSelection();
+    dismissScreenshotPreview();
+  }, [cancelScreenshotSelection, dismissScreenshotPreview]);
+
   const openColorPicker = useCallback(async () => {
+    closeScreenshotUi();
     const EyeDropper = (ownerWindow as WindowWithEyeDropper).EyeDropper;
     setEnabledWithHistory(true);
     setToolModeWithHistory("none");
@@ -906,13 +925,13 @@ function MeasurerClient({
         setColorPickerActive(false);
       }
     }
-  }, [ownerWindow, setEnabledWithHistory, setToolModeWithHistory, settingsColorClickFormat]);
-
-  const cancelScreenshotSelection = useCallback(() => {
-    screenshotOriginRef.current = null;
-    setScreenshotRect(null);
-    setScreenshotActive(false);
-  }, []);
+  }, [
+    closeScreenshotUi,
+    ownerWindow,
+    setEnabledWithHistory,
+    setToolModeWithHistory,
+    settingsColorClickFormat,
+  ]);
 
   const captureScreenshotRegion = useCallback(
     (rect: ScreenshotRect) => {
@@ -1117,21 +1136,15 @@ function MeasurerClient({
     return () => ownerWindow.clearTimeout(timeoutId);
   }, [ownerWindow, screenshotError]);
 
-  const dismissScreenshotPreview = useCallback(() => {
-    setScreenshotPreviewUrl((previous) => {
-      if (previous) URL.revokeObjectURL(previous);
-      return null;
-    });
-  }, []);
-
   const toggleSettings = useCallback(() => {
+    closeScreenshotUi();
     if (settingsOpen) {
       setSettingsOpen(false);
       return;
     }
     setSettingsTab(initialSettingsTab);
     setSettingsOpen(true);
-  }, [initialSettingsTab, settingsOpen]);
+  }, [closeScreenshotUi, initialSettingsTab, settingsOpen]);
 
   useHotkeys({
     eventTarget: ownerWindow,

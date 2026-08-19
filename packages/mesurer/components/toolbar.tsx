@@ -592,48 +592,6 @@ function ToolbarComponent(
         <XrayIcon size={20} />
       </ToolbarButton>
       <ToolbarButton
-        id="color-picker"
-        active={colorPickerActive}
-        label="Color picker"
-        shortcut="P"
-        onClick={colorPickerMode}
-        tooltipVisible={tooltipsEnabled && visibleTooltipId === "color-picker"}
-        tooltipInstant={tooltipInstant}
-        tooltipSide={tooltipSide}
-        onTooltipEnter={onTooltipEnter}
-        onTooltipLeave={onTooltipLeave}
-      >
-        <ColorPickerIcon size={20} aria-hidden="true" />
-      </ToolbarButton>
-      <div className="msr:relative">
-      <ToolbarButton
-        id="screenshot"
-        active={screenshotActive}
-        label="Screenshot"
-        shortcut="C"
-        onClick={screenshotMode}
-        tooltipVisible={
-          tooltipsEnabled &&
-          !screenshotPreviewUrl &&
-          visibleTooltipId === "screenshot"
-        }
-        tooltipInstant={tooltipInstant}
-        tooltipSide={tooltipSide}
-        onTooltipEnter={onTooltipEnter}
-        onTooltipLeave={onTooltipLeave}
-      >
-        <CameraIcon size={20} aria-hidden="true" />
-      </ToolbarButton>
-      {screenshotPreviewUrl ? (
-        <ScreenshotPreview
-          url={screenshotPreviewUrl}
-          ownerWindow={eventTarget}
-          side={tooltipSide}
-          onExited={onScreenshotPreviewExited}
-        />
-      ) : null}
-      </div>
-      <ToolbarButton
         id="rulers"
         active={rulersVisible}
         label="Rulers"
@@ -646,20 +604,6 @@ function ToolbarComponent(
         onTooltipLeave={onTooltipLeave}
       >
         <RulersIcon size={20} />
-      </ToolbarButton>
-      <ToolbarButton
-        id="text-inspector"
-        active={toolMode === "text-inspector"}
-        label="Text inspector"
-        shortcut="A"
-        onClick={textInspectorMode}
-        tooltipVisible={tooltipsEnabled && visibleTooltipId === "text-inspector"}
-        tooltipInstant={tooltipInstant}
-        tooltipSide={tooltipSide}
-        onTooltipEnter={onTooltipEnter}
-        onTooltipLeave={onTooltipLeave}
-      >
-        <TextInspectorIcon size={20} aria-hidden="true" />
       </ToolbarButton>
       <ToolbarButton
         id="guides"
@@ -811,6 +755,62 @@ function ToolbarComponent(
             </button>
           </div>
         ) : null}
+      </div>
+      <ToolbarButton
+        id="text-inspector"
+        active={toolMode === "text-inspector"}
+        label="Text inspector"
+        shortcut="A"
+        onClick={textInspectorMode}
+        tooltipVisible={tooltipsEnabled && visibleTooltipId === "text-inspector"}
+        tooltipInstant={tooltipInstant}
+        tooltipSide={tooltipSide}
+        onTooltipEnter={onTooltipEnter}
+        onTooltipLeave={onTooltipLeave}
+      >
+        <TextInspectorIcon size={20} aria-hidden="true" />
+      </ToolbarButton>
+      <ToolbarButton
+        id="color-picker"
+        active={colorPickerActive}
+        label="Color picker"
+        shortcut="P"
+        onClick={colorPickerMode}
+        tooltipVisible={tooltipsEnabled && visibleTooltipId === "color-picker"}
+        tooltipInstant={tooltipInstant}
+        tooltipSide={tooltipSide}
+        onTooltipEnter={onTooltipEnter}
+        onTooltipLeave={onTooltipLeave}
+      >
+        <ColorPickerIcon size={20} aria-hidden="true" />
+      </ToolbarButton>
+      <div className="msr:relative">
+      <ToolbarButton
+        id="screenshot"
+        active={screenshotActive}
+        label="Screenshot"
+        shortcut="C"
+        onClick={screenshotMode}
+        tooltipVisible={
+          tooltipsEnabled &&
+          !screenshotPreviewUrl &&
+          visibleTooltipId === "screenshot"
+        }
+        tooltipInstant={tooltipInstant}
+        tooltipSide={tooltipSide}
+        onTooltipEnter={onTooltipEnter}
+        onTooltipLeave={onTooltipLeave}
+      >
+        <CameraIcon size={20} aria-hidden="true" />
+      </ToolbarButton>
+      {screenshotPreviewUrl ? (
+        <ScreenshotPreview
+          url={screenshotPreviewUrl}
+          ownerWindow={eventTarget}
+          side={tooltipSide}
+          onExited={onScreenshotPreviewExited}
+        />
+      ) : null}
       </div>
       <div ref={settingsRef} className="msr:relative msr:flex">
         <ToolbarButton

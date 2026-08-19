@@ -406,11 +406,11 @@ export function SettingsPanel({
     <div className="mesurer-settings-panel msr:flex msr:max-h-[min(70vh,34rem)] msr:min-w-0 msr:flex-col msr:gap-2 msr:overflow-x-hidden msr:overflow-y-auto" onPointerDown={(event) => event.stopPropagation()}>
       <div className="mesurer-settings-tabs msr:flex msr:h-6 msr:shrink-0 msr:select-none msr:items-stretch msr:gap-0 msr:rounded-[5px] msr:bg-ink-50 msr:p-px" role="tablist" aria-label="Settings sections">
         {([
-          ["guides", "Guides"],
           ["select", "Select"],
+          ["rulers", "Rulers"],
+          ["guides", "Guides"],
           ["color-picker", "Color"],
           ["screenshot", "Camera"],
-          ["rulers", "Rulers"],
           ["general", "General"],
         ] as const).map(([value, label]) => (
           <button
