@@ -221,6 +221,20 @@ test("P opens the native color picker", async ({ page }) => {
   await expect(page.locator(".mesurer-color-picker")).toHaveCount(0);
 });
 
+test("C starts screenshot region selection", async ({ page }) => {
+  await page.goto("/e2e/fixtures/guide-overlay.html");
+  await expect(page.getByRole("button", { name: "Screenshot (C)" })).toBeVisible();
+  await page.keyboard.press("c");
+  const selection = page.getByRole("application", { name: "Screenshot selection" });
+  await expect(selection).toBeVisible();
+  await page.mouse.move(120, 140);
+  await page.mouse.down();
+  await page.mouse.move(280, 220);
+  await expect(selection).toContainText("160 × 80");
+  await page.keyboard.press("Escape");
+  await expect(selection).toHaveCount(0);
+});
+
 test("settings button opens and dismisses its popover", async ({ page }) => {
   await page.goto("/e2e/fixtures/guide-overlay.html");
   const settings = page.getByRole("button", { name: "Settings" });

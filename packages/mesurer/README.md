@@ -44,6 +44,7 @@ function App() {
 | `persistKey`            | Optional workspace storage key; default workspaces are isolated per browser tab. |
 | `portalTarget`          | Optional element or shadow root used as the overlay portal mount target.      |
 | `persistence`           | Optional storage adapter for custom or extension-backed persistence.           |
+| `captureVisibleTab`      | Supplies a PNG of the visible tab so Screenshot can copy a region.            |
 | `onPersistenceError`    | Called when persistence is unavailable or a storage write fails.              |
 | `colorPickerFormats`     | Color formats displayed in the picker popover, in display order.             |
 | `colorPickerClickFormat` | Format copied to the clipboard when a color is picked.                       |
@@ -64,6 +65,7 @@ Props are the defaults. Saved settings override them; **Use defaults** restores 
 | `S`                    | Toggle Select mode.                                   |
 | `A`                    | Toggle Text Inspector mode.                           |
 | `P`                    | Open the native Color picker.                         |
+| `C`                    | Drag a screenshot region (Chrome extension).          |
 | `G`                    | Toggle Guides mode.                                   |
 | `X`                    | Toggle X-ray mode.                                    |
 | `R`                    | Toggle pixel rulers along the top and left edges.     |
@@ -84,6 +86,7 @@ Props are the defaults. Saved settings override them; **Use defaults** restores 
 - **Text Inspector** – Inspect typography styles and pin text details
 - **X-ray mode** – Reveal element structure without changing the page
 - **Color picker** – Sample rendered colors and copy values in your chosen format
+- **Screenshot** – Drag a region of the visible tab and copy it (Chrome extension)
 - **Distance overlays** – Hold Alt for quick spacing checks
 - **Undo/redo** – Command history for guide and measurement changes
 - **Settings** – Configure selection color, guide styles, ruler behavior, formats, and persistence

@@ -50,6 +50,17 @@ import {
   type ColorPickerFormat,
   type ColorSample,
 } from "./core/colors";
+import { ScreenshotSelectOverlay } from "./components/screenshot-select-overlay";
+import {
+  copyPngToClipboard,
+  cropPngToViewportRect,
+  hideNodesForCapture,
+  MIN_SCREENSHOT_SELECTION,
+  normalizeScreenshotRect,
+  waitForNextPaint,
+  type ScreenshotRect,
+} from "./core/screenshot";
+import { captureVisibleTabPng, prepareScreenshotCapture } from "./core/screenshot-capture";
 import {
   createLocalStoragePersistence,
   DEFAULT_GUIDE_STYLE,
@@ -80,6 +91,7 @@ export type MeasurerProps = {
   rulerSettings?: Partial<RulerSettings>;
   persistence?: MesurerPersistence;
   onPersistenceError?: (error: unknown) => void;
+  captureVisibleTab?: () => Promise<Blob>;
 };
 
 type EyeDropperResult = { sRGBHex: string };
@@ -100,6 +112,10 @@ const XRAY_STYLES = `
 .xray-mode .mesurer-root *,
 .xray-mode .mesurer-toolbar-surface,
 .xray-mode .mesurer-toolbar-surface *,
+.xray-mode .mesurer-toast-surface,
+.xray-mode .mesurer-screenshot-preview,
+.xray-mode .mesurer-screenshot-select,
+.xray-mode .mesurer-screenshot-select *,
 .xray-mode .mesurer-ti-box,
 .xray-mode .mesurer-ti-card,
 .xray-mode .mesurer-ti-card *,
@@ -171,6 +187,7 @@ function MeasurerClient({
   rulerSettings: rulerSettingsDefault,
   persistence,
   onPersistenceError,
+  captureVisibleTab,
 }: Required<
   Omit<
     MeasurerProps,
@@ -179,9 +196,13 @@ function MeasurerClient({
     | "onPersistenceError"
     | "guideStyle"
     | "rulerSettings"
+    | "captureVisibleTab"
   >
 > &
-  Pick<MeasurerProps, "persistKey" | "persistence" | "onPersistenceError"> & {
+  Pick<
+    MeasurerProps,
+    "persistKey" | "persistence" | "onPersistenceError" | "captureVisibleTab"
+  > & {
     guideStyle: GuideStyle;
     rulerSettings: RulerSettings;
   }) {
@@ -210,6 +231,10 @@ function MeasurerClient({
   const textInspector = textInspectorRef.current!;
   const selectionRectRef = useRef<Rect | null>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
+  const screenshotOverlayRef = useRef<HTMLDivElement>(null);
+  const screenshotOriginRef = useRef<{ x: number; y: number } | null>(null);
+  const capturingScreenshotRef = useRef(false);
+  const preparingScreenshotRef = useRef(false);
   const selectionAnimationCleanupTimeoutRef = useRef<number | null>(null);
   const guideDragRef = useRef<{
     id: string;
@@ -353,6 +378,14 @@ function MeasurerClient({
   const [colorPickerActive, setColorPickerActive] = useState(false);
   const [colorPickerSample, setColorPickerSample] = useState<ColorSample | null>(null);
   const [colorPickerUnsupported, setColorPickerUnsupported] = useState(false);
+  const [screenshotError, setScreenshotError] = useState(false);
+  const [screenshotPreviewUrl, setScreenshotPreviewUrl] = useState<string | null>(
+    null,
+  );
+  const [screenshotActive, setScreenshotActive] = useState(false);
+  const [screenshotRect, setScreenshotRect] = useState<ScreenshotRect | null>(
+    null,
+  );
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<SettingsTab>("general");
   const [settingsHighlightColor, setSettingsHighlightColor] = useState(
@@ -859,6 +892,192 @@ function MeasurerClient({
     }
   }, [ownerWindow, setEnabledWithHistory, setToolModeWithHistory, settingsColorClickFormat]);
 
+  const cancelScreenshotSelection = useCallback(() => {
+    screenshotOriginRef.current = null;
+    setScreenshotRect(null);
+    setScreenshotActive(false);
+  }, []);
+
+  const captureScreenshotRegion = useCallback(
+    (rect: ScreenshotRect) => {
+      if (capturingScreenshotRef.current) return;
+      capturingScreenshotRef.current = true;
+      setScreenshotError(false);
+      const restore = hideNodesForCapture([
+        toolbarRef.current,
+        screenshotOverlayRef.current,
+        overlayRef.current?.querySelector<HTMLElement>(".mesurer-color-picker") ??
+          null,
+        overlayRef.current?.querySelector<HTMLElement>(
+          ".mesurer-screenshot-preview",
+        ) ?? null,
+      ]);
+      const croppedPromise = (async () => {
+        try {
+          await waitForNextPaint(ownerWindow);
+          const blob = captureVisibleTab
+            ? await captureVisibleTab()
+            : await captureVisibleTabPng(ownerDocument, ownerWindow);
+          return cropPngToViewportRect(
+            blob,
+            rect,
+            {
+              width: ownerWindow.innerWidth,
+              height: ownerWindow.innerHeight,
+            },
+            ownerDocument,
+          );
+        } finally {
+          restore();
+        }
+      })();
+      void croppedPromise.catch(() => undefined);
+      const copyPromise = copyPngToClipboard(
+        croppedPromise,
+        ownerWindow.navigator.clipboard,
+      );
+      void (async () => {
+        try {
+          const cropped = await croppedPromise;
+          await copyPromise;
+          const nextUrl = URL.createObjectURL(cropped);
+          setScreenshotPreviewUrl((previous) => {
+            if (previous) URL.revokeObjectURL(previous);
+            return nextUrl;
+          });
+        } catch {
+          setScreenshotError(true);
+        } finally {
+          capturingScreenshotRef.current = false;
+          cancelScreenshotSelection();
+        }
+      })();
+    },
+    [cancelScreenshotSelection, captureVisibleTab, ownerDocument, ownerWindow, overlayRef],
+  );
+
+  const toggleScreenshotSelection = useCallback(async () => {
+    if (screenshotActive) {
+      cancelScreenshotSelection();
+      return;
+    }
+    if (preparingScreenshotRef.current) return;
+    preparingScreenshotRef.current = true;
+    try {
+      if (!captureVisibleTab) {
+        await prepareScreenshotCapture(ownerDocument, ownerWindow);
+      }
+      setEnabledWithHistory(true);
+      setToolbarActive(true);
+      setColorPickerActive(false);
+      setSettingsOpen(false);
+      setScreenshotError(false);
+      screenshotOriginRef.current = null;
+      setScreenshotRect(null);
+      setScreenshotActive(true);
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === "AbortError")) {
+        setScreenshotError(true);
+      }
+    } finally {
+      preparingScreenshotRef.current = false;
+    }
+  }, [
+    cancelScreenshotSelection,
+    captureVisibleTab,
+    ownerDocument,
+    ownerWindow,
+    screenshotActive,
+    setEnabledWithHistory,
+  ]);
+
+  useEffect(() => {
+    if (!enabled) cancelScreenshotSelection();
+  }, [cancelScreenshotSelection, enabled]);
+
+  const handleScreenshotPointerDown = useCallback(
+    (event: ReactPointerEvent<HTMLDivElement>) => {
+      if (event.button !== 0) return;
+      event.preventDefault();
+      event.stopPropagation();
+      screenshotOriginRef.current = { x: event.clientX, y: event.clientY };
+      setScreenshotRect(
+        normalizeScreenshotRect(
+          screenshotOriginRef.current,
+          screenshotOriginRef.current,
+          {
+            width: ownerWindow.innerWidth,
+            height: ownerWindow.innerHeight,
+          },
+        ),
+      );
+      event.currentTarget.setPointerCapture(event.pointerId);
+    },
+    [ownerWindow],
+  );
+
+  const handleScreenshotPointerMove = useCallback(
+    (event: ReactPointerEvent<HTMLDivElement>) => {
+      const origin = screenshotOriginRef.current;
+      if (!origin) return;
+      setScreenshotRect(
+        normalizeScreenshotRect(
+          origin,
+          { x: event.clientX, y: event.clientY },
+          {
+            width: ownerWindow.innerWidth,
+            height: ownerWindow.innerHeight,
+          },
+        ),
+      );
+    },
+    [ownerWindow],
+  );
+
+  const handleScreenshotPointerUp = useCallback(
+    (event: ReactPointerEvent<HTMLDivElement>) => {
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+      const origin = screenshotOriginRef.current;
+      screenshotOriginRef.current = null;
+      if (!origin) return;
+      const rect = normalizeScreenshotRect(
+        origin,
+        { x: event.clientX, y: event.clientY },
+        {
+          width: ownerWindow.innerWidth,
+          height: ownerWindow.innerHeight,
+        },
+      );
+      setScreenshotRect(rect);
+      if (
+        rect.width < MIN_SCREENSHOT_SELECTION ||
+        rect.height < MIN_SCREENSHOT_SELECTION
+      ) {
+        setScreenshotRect(null);
+        return;
+      }
+      void captureScreenshotRegion(rect);
+    },
+    [captureScreenshotRegion, ownerWindow],
+  );
+
+  useEffect(() => {
+    if (!screenshotError) return;
+    const timeoutId = ownerWindow.setTimeout(() => {
+      setScreenshotError(false);
+    }, 2500);
+    return () => ownerWindow.clearTimeout(timeoutId);
+  }, [ownerWindow, screenshotError]);
+
+  const dismissScreenshotPreview = useCallback(() => {
+    setScreenshotPreviewUrl((previous) => {
+      if (previous) URL.revokeObjectURL(previous);
+      return null;
+    });
+  }, []);
+
   const toggleSettings = useCallback(() => {
     if (settingsOpen) {
       setSettingsOpen(false);
@@ -882,6 +1101,9 @@ function MeasurerClient({
     setGuideOrientation: setGuideOrientationWithHistory,
     onInteract: () => setToolbarActive(true),
     onColorPicker: openColorPicker,
+    onScreenshot: toggleScreenshotSelection,
+    onCloseScreenshot: cancelScreenshotSelection,
+    isScreenshotActive: () => screenshotActive,
     onToggleXray: () => setXrayVisible((previous) => !previous),
     onToggleSettings: toggleSettings,
     isSettingsOpen: () => settingsOpen,
@@ -1480,6 +1702,15 @@ function MeasurerClient({
         onClose={() => setColorPickerActive(false)}
       />
 
+      <ScreenshotSelectOverlay
+        ref={screenshotOverlayRef}
+        active={screenshotActive}
+        rect={screenshotRect}
+        onPointerDown={handleScreenshotPointerDown}
+        onPointerMove={handleScreenshotPointerMove}
+        onPointerUp={handleScreenshotPointerUp}
+      />
+
       <Toolbar
         ref={toolbarRef}
         eventTarget={ownerWindow}
@@ -1496,6 +1727,9 @@ function MeasurerClient({
         colorPickerActive={colorPickerActive}
         setColorPickerActive={setColorPickerActive}
         onColorPickerClick={openColorPicker}
+        screenshotActive={screenshotActive}
+        onScreenshotClick={toggleScreenshotSelection}
+        onCancelScreenshot={cancelScreenshotSelection}
         settingsOpen={settingsOpen}
         setSettingsOpen={setSettingsOpen}
         highlightColor={settingsHighlightColor}
@@ -1527,6 +1761,9 @@ function MeasurerClient({
          onToggleSettings={toggleSettings}
          onResetSettings={resetSettings}
          onClearWorkspace={clearWorkspace}
+         screenshotError={screenshotError}
+         screenshotPreviewUrl={screenshotPreviewUrl}
+         onScreenshotPreviewExited={dismissScreenshotPreview}
        />
     </div>,
     portalTarget,
@@ -1550,6 +1787,7 @@ export default function Measurer({
   rulerSettings,
   persistence,
   onPersistenceError,
+  captureVisibleTab,
 }: MeasurerProps) {
   if (typeof document !== "undefined") {
     ensureMeasurerStyles(MESURER_STYLES, portalTarget);
@@ -1575,6 +1813,7 @@ export default function Measurer({
       rulerSettings={{ ...DEFAULT_RULER_SETTINGS, ...rulerSettings }}
       persistence={persistence}
       onPersistenceError={onPersistenceError}
+      captureVisibleTab={captureVisibleTab}
       portalTarget={portalTarget ?? document.body}
     />
   );

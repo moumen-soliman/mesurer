@@ -14,11 +14,13 @@ import type { ToolMode } from "../core/types";
 import type { ColorPickerFormat } from "../core/colors";
 import type { GuideStyle, RulerSettings } from "../core/persistence";
 import { cn } from "../core/utils";
+import { ScreenshotPreview } from "./screenshot-preview";
 import { SettingsPanel, type SettingsTab } from "./settings-panel";
 import { Tooltip } from "./tooltip";
 import {
   CaretDownIcon,
   CheckIcon,
+  CameraIcon,
   ColorPickerIcon,
   CursorIcon,
   GearIcon,
@@ -49,6 +51,9 @@ type ToolbarProps = {
   colorPickerActive: boolean;
   setColorPickerActive: Dispatch<SetStateAction<boolean>>;
   onColorPickerClick: () => void;
+  screenshotActive: boolean;
+  onScreenshotClick: () => void;
+  onCancelScreenshot: () => void;
   settingsOpen: boolean;
   setSettingsOpen: Dispatch<SetStateAction<boolean>>;
   highlightColor: string;
@@ -80,6 +85,9 @@ type ToolbarProps = {
   onToggleSettings: () => void;
   onResetSettings: () => void;
   onClearWorkspace: () => void;
+  screenshotError: boolean;
+  screenshotPreviewUrl: string | null;
+  onScreenshotPreviewExited: () => void;
 };
 
 const TOOLBAR_TOOLTIP_DELAY_MS = 800;
@@ -335,6 +343,9 @@ function ToolbarComponent(
     colorPickerActive,
     setColorPickerActive,
     onColorPickerClick,
+    screenshotActive,
+    onScreenshotClick,
+    onCancelScreenshot,
     settingsOpen,
     setSettingsOpen,
     highlightColor,
@@ -366,6 +377,9 @@ function ToolbarComponent(
     onToggleSettings,
     onResetSettings,
     onClearWorkspace,
+    screenshotError,
+    screenshotPreviewUrl,
+    onScreenshotPreviewExited,
   }: ToolbarProps,
   ref: React.Ref<HTMLDivElement>,
 ) {
@@ -419,36 +433,41 @@ function ToolbarComponent(
   const selectMode = useCallback(() => {
     setEnabled(true);
     setColorPickerActive(false);
+    onCancelScreenshot();
     setToolMode((prev) => (prev === "select" ? "none" : "select"));
     onInteract();
-  }, [onInteract, setColorPickerActive, setEnabled, setToolMode]);
+  }, [onCancelScreenshot, onInteract, setColorPickerActive, setEnabled, setToolMode]);
 
   const guidesMode = useCallback(() => {
     setEnabled(true);
     setColorPickerActive(false);
+    onCancelScreenshot();
     setToolMode((prev) => (prev === "guides" ? "none" : "guides"));
     onInteract();
-  }, [onInteract, setColorPickerActive, setEnabled, setToolMode]);
+  }, [onCancelScreenshot, onInteract, setColorPickerActive, setEnabled, setToolMode]);
 
   const textInspectorMode = useCallback(() => {
     setEnabled(true);
     setColorPickerActive(false);
+    onCancelScreenshot();
     setToolMode((prev) =>
       prev === "text-inspector" ? "none" : "text-inspector",
     );
     onInteract();
-  }, [onInteract, setColorPickerActive, setEnabled, setToolMode]);
+  }, [onCancelScreenshot, onInteract, setColorPickerActive, setEnabled, setToolMode]);
 
   const xrayMode = useCallback(() => {
     setEnabled(true);
     setColorPickerActive(false);
+    onCancelScreenshot();
     setXrayVisible((prev) => !prev);
     onInteract();
-  }, [onInteract, setColorPickerActive, setEnabled, setXrayVisible]);
+  }, [onCancelScreenshot, onInteract, setColorPickerActive, setEnabled, setXrayVisible]);
 
   const colorPickerMode = useCallback(() => {
     setEnabled(true);
     setToolMode("none");
+    onCancelScreenshot();
     if (colorPickerActive) {
       setColorPickerActive(false);
     } else {
@@ -456,24 +475,33 @@ function ToolbarComponent(
       onColorPickerClick();
     }
     onInteract();
-  }, [colorPickerActive, onColorPickerClick, onInteract, setColorPickerActive, setEnabled, setToolMode]);
+  }, [colorPickerActive, onCancelScreenshot, onColorPickerClick, onInteract, setColorPickerActive, setEnabled, setToolMode]);
+
+  const screenshotMode = useCallback(() => {
+    setEnabled(true);
+    setColorPickerActive(false);
+    onScreenshotClick();
+    onInteract();
+  }, [onInteract, onScreenshotClick, setColorPickerActive, setEnabled]);
 
   const rulersMode = useCallback(() => {
     setEnabled(true);
     setColorPickerActive(false);
+    onCancelScreenshot();
     setRulersVisible((prev) => !prev);
     onInteract();
-  }, [onInteract, setColorPickerActive, setEnabled, setRulersVisible]);
+  }, [onCancelScreenshot, onInteract, setColorPickerActive, setEnabled, setRulersVisible]);
 
   const selectGuideOrientation = useCallback(
     (orientation: "vertical" | "horizontal") => {
       setEnabled(true);
+      onCancelScreenshot();
       setToolMode("guides");
       setGuideOrientation(orientation);
       onInteract();
       setGuideMenuOpen(false);
     },
-    [onInteract, setEnabled, setGuideOrientation, setToolMode],
+    [onCancelScreenshot, onInteract, setEnabled, setGuideOrientation, setToolMode],
   );
 
   useLayoutEffect(() => {
@@ -514,9 +542,16 @@ function ToolbarComponent(
 
   return (
     <div
+      className="msr:absolute msr:z-[90]"
+      style={{
+        left: position.x,
+        top: position.y,
+        visibility: screenshotActive ? "hidden" : undefined,
+      }}
+    >
+    <div
       ref={ref}
-      className="mesurer-toolbar-surface msr:pointer-events-auto msr:absolute msr:z-[90] msr:flex msr:items-center msr:gap-1 msr:rounded-[12px] msr:bg-[#fff] msr:p-1 msr:outline msr:outline-transparent"
-      style={{ left: position.x, top: position.y }}
+      className="mesurer-toolbar-surface msr:pointer-events-auto msr:flex msr:items-center msr:gap-1 msr:rounded-[12px] msr:bg-[#fff] msr:p-1 msr:outline msr:outline-transparent"
       onPointerDown={(event) => {
         onInteract();
         onPointerDown(event);
@@ -566,6 +601,34 @@ function ToolbarComponent(
       >
         <ColorPickerIcon size={20} aria-hidden="true" />
       </ToolbarButton>
+      <div className="msr:relative">
+      <ToolbarButton
+        id="screenshot"
+        active={screenshotActive}
+        label="Screenshot"
+        shortcut="C"
+        onClick={screenshotMode}
+        tooltipVisible={
+          tooltipsEnabled &&
+          !screenshotPreviewUrl &&
+          visibleTooltipId === "screenshot"
+        }
+        tooltipInstant={tooltipInstant}
+        tooltipSide={tooltipSide}
+        onTooltipEnter={onTooltipEnter}
+        onTooltipLeave={onTooltipLeave}
+      >
+        <CameraIcon size={20} aria-hidden="true" />
+      </ToolbarButton>
+      {screenshotPreviewUrl ? (
+        <ScreenshotPreview
+          url={screenshotPreviewUrl}
+          ownerWindow={eventTarget}
+          side={tooltipSide}
+          onExited={onScreenshotPreviewExited}
+        />
+      ) : null}
+      </div>
       <ToolbarButton
         id="rulers"
         active={rulersVisible}
@@ -752,6 +815,7 @@ function ToolbarComponent(
           label="Settings"
           shortcut="⌘/Ctrl+,"
           onClick={() => {
+            onCancelScreenshot();
             onInteract();
             onToggleSettings();
           }}
@@ -813,6 +877,16 @@ function ToolbarComponent(
           </div>
         ) : null}
       </div>
+    </div>
+      {screenshotError ? (
+        <div
+          role="status"
+          aria-live="polite"
+          className="mesurer-toast-surface msr:pointer-events-none msr:absolute msr:top-full msr:left-1/2 msr:z-10 msr:mt-2 msr:-translate-x-1/2 msr:whitespace-nowrap msr:rounded-[10px] msr:bg-white msr:px-3 msr:py-2 msr:text-[12px] msr:leading-4 msr:text-black"
+        >
+          Couldn't copy screenshot
+        </div>
+      ) : null}
     </div>
   );
 }

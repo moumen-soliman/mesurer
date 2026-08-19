@@ -4,6 +4,7 @@ export default defineConfig({
   entry: {
     background: "src/background.ts",
     content: "src/content.tsx",
+    "capture-bridge": "src/capture-bridge.ts",
   },
   outDir: "dist",
   format: ["iife"],

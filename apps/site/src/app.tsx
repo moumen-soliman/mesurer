@@ -2,6 +2,7 @@ import { Measurer } from "mesurer";
 import {
   ArrowsCounterClockwiseIcon,
   CalculatorIcon,
+  CameraIcon,
   CursorIcon,
   GridFourIcon,
   GearIcon,
@@ -138,6 +139,11 @@ function HomeContent() {
       icon: <EyedropperIcon size={16} weight="light" />,
       title: "Color picker",
       description: "Sample colors and copy values in your chosen format",
+    },
+    {
+      icon: <CameraIcon size={16} weight="light" />,
+      title: "Screenshot",
+      description: "Drag a region and copy it — Chrome extension",
     },
     {
       icon: <TextAaIcon size={16} weight="light" />,
@@ -368,6 +374,10 @@ export default function RootLayout({ children }) {
           <div className="flex items-start justify-between gap-8 border-b border-border px-2 py-2">
             <div className="font-mono text-strong"><code className="code">P</code></div>
             <div className="max-w-[60%] text-right text-balance text-muted">Open the native Color picker</div>
+          </div>
+          <div className="flex items-start justify-between gap-8 border-b border-border px-2 py-2">
+            <div className="font-mono text-strong"><code className="code">C</code></div>
+            <div className="max-w-[60%] text-right text-balance text-muted">Drag a screenshot region (Chrome extension)</div>
           </div>
           <div className="flex items-start justify-between gap-8 border-b border-border px-2 py-2">
             <div className="font-mono text-strong">
