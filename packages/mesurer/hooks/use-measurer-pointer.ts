@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react"
+import { useCallback, useRef } from "react"
 import type {
   MutableRefObject,
   PointerEvent as ReactPointerEvent,
@@ -141,14 +141,6 @@ export const useMeasurerPointer = ({
   })
   const shiftDragRef = useRef(false)
   const shiftToggleElementRef = useRef<HTMLElement | null>(null)
-
-  useEffect(() => {
-    return () => {
-      if (hoverFrameRef.current) {
-         window.cancelAnimationFrame(hoverFrameRef.current)
-      }
-    }
-  }, [])
 
   const updateHoverTarget = useCallback(
     (point: Point) => {
@@ -646,6 +638,10 @@ export const useMeasurerPointer = ({
   )
 
   const handlePointerLeave = useCallback(() => {
+    if (hoverFrameRef.current) {
+      window.cancelAnimationFrame(hoverFrameRef.current)
+      hoverFrameRef.current = null
+    }
     clearGuideDragHold()
     setStart(null)
     setEnd(null)

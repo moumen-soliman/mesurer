@@ -39,7 +39,15 @@ export const useToolbarDrag = (initialPosition: Point, eventTarget: Window) => {
     previousUserSelectRef.current = null
   }, [eventTarget])
 
-  useEffect(() => restoreTextSelection, [restoreTextSelection])
+  useEffect(() => {
+    return () => {
+      detachListenersRef.current?.()
+      const previous = previousUserSelectRef.current
+      if (previous === null) return
+      eventTarget.document.documentElement.style.userSelect = previous
+      previousUserSelectRef.current = null
+    }
+  }, [eventTarget])
 
   const onPointerDown = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {

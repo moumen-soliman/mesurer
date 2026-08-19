@@ -22,59 +22,58 @@ export const useSelectionAnimationCleanup = ({
   setSelectedMeasurements,
 }: UseSelectionAnimationCleanupOptions) => {
   const timeoutRef = useRef<number | null>(null)
+  const keyRef = useRef<string>("")
+  const hasSelectionAnimationState =
+    !!selectionOriginRect ||
+    !!selectedMeasurement?.originRect ||
+    selectedMeasurements.some((measurement) => !!measurement.originRect)
+  const key = hasSelectionAnimationState
+    ? [
+        selectionOriginRect ? "origin" : "",
+        selectedMeasurement?.originRect ? selectedMeasurement.id : "",
+        selectedMeasurements
+          .map((measurement) =>
+            measurement.originRect ? measurement.id : "",
+          )
+          .join(","),
+      ].join("|")
+    : ""
+
+  if (keyRef.current !== key) {
+    keyRef.current = key
+    if (timeoutRef.current !== null) {
+      ownerWindow.clearTimeout(timeoutRef.current)
+      timeoutRef.current = null
+    }
+    if (hasSelectionAnimationState) {
+      timeoutRef.current = ownerWindow.setTimeout(() => {
+        timeoutRef.current = null
+        setSelectionOriginRect((prev) => (prev ? null : prev))
+        setSelectedMeasurement((prev) => {
+          if (!prev?.originRect) return prev
+          const { originRect: _originRect, ...next } = prev
+          return next
+        })
+        setSelectedMeasurements((prev) => {
+          let changed = false
+          const next = prev.map((measurement) => {
+            if (!measurement.originRect) return measurement
+            changed = true
+            const { originRect: _originRect, ...rest } = measurement
+            return rest
+          })
+          return changed ? next : prev
+        })
+      }, MEASURE_TRANSITION_MS)
+    }
+  }
 
   useEffect(() => {
-    const hasSelectionAnimationState =
-      !!selectionOriginRect ||
-      !!selectedMeasurement?.originRect ||
-      selectedMeasurements.some((measurement) => !!measurement.originRect)
-
-    if (!hasSelectionAnimationState) {
-      if (timeoutRef.current !== null) {
-        ownerWindow.clearTimeout(timeoutRef.current)
-        timeoutRef.current = null
-      }
-      return
-    }
-
-    if (timeoutRef.current !== null) return
-
-    timeoutRef.current = ownerWindow.setTimeout(() => {
-      timeoutRef.current = null
-
-      setSelectionOriginRect((prev) => (prev ? null : prev))
-
-      setSelectedMeasurement((prev) => {
-        if (!prev?.originRect) return prev
-        const { originRect: _originRect, ...next } = prev
-        return next
-      })
-
-      setSelectedMeasurements((prev) => {
-        let changed = false
-        const next = prev.map((measurement) => {
-          if (!measurement.originRect) return measurement
-          changed = true
-          const { originRect: _originRect, ...rest } = measurement
-          return rest
-        })
-        return changed ? next : prev
-      })
-    }, MEASURE_TRANSITION_MS)
-
     return () => {
       if (timeoutRef.current !== null) {
         ownerWindow.clearTimeout(timeoutRef.current)
         timeoutRef.current = null
       }
     }
-  }, [
-    ownerWindow,
-    selectedMeasurement,
-    selectedMeasurements,
-    selectionOriginRect,
-    setSelectedMeasurement,
-    setSelectedMeasurements,
-    setSelectionOriginRect,
-  ])
+  }, [ownerWindow])
 }

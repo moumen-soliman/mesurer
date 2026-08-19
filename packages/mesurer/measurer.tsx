@@ -34,7 +34,6 @@ import { useRulerGuides } from "./hooks/use-ruler-guides";
 import { useScreenshot } from "./hooks/use-screenshot";
 import { useSelectionAnimationCleanup } from "./hooks/use-selection-animation-cleanup";
 import { useTextInspector } from "./hooks/use-text-inspector";
-import { useToolbarIdle } from "./hooks/use-toolbar-idle";
 import { useXray } from "./hooks/use-xray";
 import { MeasurerOverlay } from "./render/measurer-overlay";
 import { settingsTabForContext } from "./core/settings-tab";
@@ -770,24 +769,19 @@ function MeasurerClient({
   });
 
   useXray(ownerDocument, xrayVisible);
-  useToolbarIdle({
-    ownerWindow,
-    toolbarRef,
-    toolbarActive,
-    toolMode,
-    setToolbarActive,
-  });
   useGuideWindowEvents({
     ownerDocument,
     ownerWindow,
     enabled,
     settingsOpen,
     toolMode,
+    toolbarActive,
     guides,
     toolbarRef,
     createActionCommit,
     setGuides: setGuidesPersisted,
     setSelectedGuideIds: setSelectedGuideIdsPersisted,
+    setToolbarActive,
   });
 
   const selectionToolRef = useRef(toolMode);

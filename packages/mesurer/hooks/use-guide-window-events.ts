@@ -1,6 +1,6 @@
 import { useEffect, useRef, type Dispatch, type RefObject, type SetStateAction } from "react"
 import { GUIDE_HITBOX_SIZE } from "../core/constants"
-import type { Guide } from "../core/types"
+import type { Guide, ToolMode } from "../core/types"
 
 type GuideDrag = {
   id: string
@@ -15,12 +15,14 @@ type UseGuideWindowEventsOptions = {
   ownerWindow: Window
   enabled: boolean
   settingsOpen: boolean
-  toolMode: string
+  toolMode: ToolMode
+  toolbarActive: boolean
   guides: Guide[]
   toolbarRef: RefObject<HTMLDivElement | null>
   createActionCommit: () => () => void
   setGuides: Dispatch<SetStateAction<Guide[]>>
   setSelectedGuideIds: Dispatch<SetStateAction<string[]>>
+  setToolbarActive: (active: boolean) => void
 }
 
 export const useGuideWindowEvents = ({
@@ -29,11 +31,13 @@ export const useGuideWindowEvents = ({
   enabled,
   settingsOpen,
   toolMode,
+  toolbarActive,
   guides,
   toolbarRef,
   createActionCommit,
   setGuides,
   setSelectedGuideIds,
+  setToolbarActive,
 }: UseGuideWindowEventsOptions) => {
   const guideScrollRef = useRef({
     x: ownerWindow.scrollX,
@@ -41,6 +45,36 @@ export const useGuideWindowEvents = ({
   })
   const guideDragRef = useRef<GuideDrag | null>(null)
   const guideUserSelectRef = useRef<string | null>(null)
+  const optionsRef = useRef({
+    enabled,
+    settingsOpen,
+    toolMode,
+    toolbarActive,
+    guides,
+    createActionCommit,
+    setGuides,
+    setSelectedGuideIds,
+    setToolbarActive,
+    toolbarRef,
+  })
+  optionsRef.current = {
+    enabled,
+    settingsOpen,
+    toolMode,
+    toolbarActive,
+    guides,
+    createActionCommit,
+    setGuides,
+    setSelectedGuideIds,
+    setToolbarActive,
+    toolbarRef,
+  }
+
+  if (!enabled && guideUserSelectRef.current !== null) {
+    ownerDocument.documentElement.style.userSelect = guideUserSelectRef.current
+    guideUserSelectRef.current = null
+    guideDragRef.current = null
+  }
 
   useEffect(() => {
     const handleScroll = () => {
@@ -53,7 +87,7 @@ export const useGuideWindowEvents = ({
       guideScrollRef.current = next
       if (deltaX === 0 && deltaY === 0) return
 
-      setGuides((prev) =>
+      optionsRef.current.setGuides((prev) =>
         prev.map((guide) => ({
           ...guide,
           position:
@@ -63,16 +97,16 @@ export const useGuideWindowEvents = ({
       )
     }
 
-    ownerWindow.addEventListener("scroll", handleScroll, true)
-    return () => ownerWindow.removeEventListener("scroll", handleScroll, true)
-  }, [ownerWindow, setGuides])
-
-  useEffect(() => {
-    if (!enabled) return
-
     const handleGuidePointerDown = (event: PointerEvent) => {
-      if (settingsOpen) return
-      if (toolbarRef.current?.contains(event.target as Node)) return
+      const current = optionsRef.current
+      if (current.toolbarActive && current.toolMode === "none") {
+        if (!current.toolbarRef.current?.contains(event.target as Node)) {
+          current.setToolbarActive(false)
+        }
+      }
+      if (!current.enabled) return
+      if (current.settingsOpen) return
+      if (current.toolbarRef.current?.contains(event.target as Node)) return
       const OwnerElement = (ownerWindow as Window & { Element: typeof Element })
         .Element
       const guideTarget = event.composedPath().some(
@@ -80,10 +114,10 @@ export const useGuideWindowEvents = ({
           target instanceof OwnerElement &&
           target.hasAttribute("data-mesurer-guide"),
       )
-      if (guideTarget && toolMode !== "none") return
+      if (guideTarget && current.toolMode !== "none") return
 
       const point = { x: event.clientX, y: event.clientY }
-      const guide = guides.find((candidate) => {
+      const guide = current.guides.find((candidate) => {
         const distance =
           candidate.orientation === "vertical"
             ? Math.abs(candidate.position - point.x)
@@ -92,17 +126,17 @@ export const useGuideWindowEvents = ({
       })
       if (!guide) return
 
-      if (event.button === 0 && !event.shiftKey && toolMode === "none") {
+      if (event.button === 0 && !event.shiftKey && current.toolMode === "none") {
         guideDragRef.current = {
           id: guide.id,
           orientation: guide.orientation,
           pointerId: event.pointerId,
-          commit: createActionCommit(),
+          commit: current.createActionCommit(),
           committed: false,
         }
       }
 
-      setSelectedGuideIds((prev) =>
+      current.setSelectedGuideIds((prev) =>
         event.shiftKey
           ? prev.includes(guide.id)
             ? prev.filter((id) => id !== guide.id)
@@ -114,6 +148,7 @@ export const useGuideWindowEvents = ({
     const handleGuidePointerMove = (event: PointerEvent) => {
       const drag = guideDragRef.current
       if (!drag || drag.pointerId !== event.pointerId) return
+      if (!optionsRef.current.enabled) return
       const position =
         drag.orientation === "vertical" ? event.clientX : event.clientY
       if (!drag.committed) {
@@ -127,7 +162,7 @@ export const useGuideWindowEvents = ({
         drag.commit()
         drag.committed = true
       }
-      setGuides((prev) =>
+      optionsRef.current.setGuides((prev) =>
         prev.map((guide) =>
           guide.id === drag.id ? { ...guide, position } : guide,
         ),
@@ -145,11 +180,13 @@ export const useGuideWindowEvents = ({
       }
     }
 
+    ownerWindow.addEventListener("scroll", handleScroll, true)
     ownerWindow.addEventListener("pointerdown", handleGuidePointerDown, true)
     ownerWindow.addEventListener("pointermove", handleGuidePointerMove, true)
     ownerWindow.addEventListener("pointerup", handleGuidePointerEnd, true)
     ownerWindow.addEventListener("pointercancel", handleGuidePointerEnd, true)
     return () => {
+      ownerWindow.removeEventListener("scroll", handleScroll, true)
       ownerWindow.removeEventListener(
         "pointerdown",
         handleGuidePointerDown,
@@ -172,16 +209,5 @@ export const useGuideWindowEvents = ({
         guideUserSelectRef.current = null
       }
     }
-  }, [
-    createActionCommit,
-    enabled,
-    guides,
-    ownerDocument,
-    ownerWindow,
-    setGuides,
-    setSelectedGuideIds,
-    settingsOpen,
-    toolMode,
-    toolbarRef,
-  ])
+  }, [ownerDocument, ownerWindow])
 }

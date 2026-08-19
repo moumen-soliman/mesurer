@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react"
 import type {
   MesurerPersistence,
   MesurerPersistenceSnapshot,
+  PersistenceChangeSource,
 } from "../core/persistence"
 
 type PersistenceLifecycleOptions = {
@@ -11,7 +12,10 @@ type PersistenceLifecycleOptions = {
   persistState: () => void
   settingsPersistOnReload: boolean
   saveWorkspace: () => void
-  applyPersistenceSnapshot: (snapshot: MesurerPersistenceSnapshot | null) => void
+  applyPersistenceSnapshot: (
+    snapshot: MesurerPersistenceSnapshot | null,
+    source?: PersistenceChangeSource,
+  ) => void
   storedState: MesurerPersistenceSnapshot | null | undefined
   applyingExternalPersistenceRef: { current: boolean }
   workspacePersistTimeoutRef: { current: number | null }
@@ -29,48 +33,50 @@ export const usePersistenceLifecycle = ({
   applyingExternalPersistenceRef,
   workspacePersistTimeoutRef,
 }: PersistenceLifecycleOptions) => {
+  const previousPersistenceRef = useRef(activePersistence)
+  if (previousPersistenceRef.current !== activePersistence) {
+    previousPersistenceRef.current = activePersistence
+    applyPersistenceSnapshot(storedState ?? null)
+  }
 
-  useEffect(() => {
-    return () => activePersistence.setErrorHandler?.(undefined)
-  }, [activePersistence])
-
-  useEffect(() => {
+  const persistSettingsRef = useRef<(() => void) | null>(null)
+  if (persistSettingsRef.current !== persistSettings) {
+    persistSettingsRef.current = persistSettings
     if (applyingExternalPersistenceRef.current) {
       applyingExternalPersistenceRef.current = false
-      return
+    } else {
+      persistSettings()
+      if (settingsPersistOnReload) persistState()
     }
-    persistSettings()
-    if (settingsPersistOnReload) persistState()
-  }, [
-    applyingExternalPersistenceRef,
-    persistSettings,
-    persistState,
-    settingsPersistOnReload,
-  ])
+  }
 
   useEffect(() => {
-    if (!settingsPersistOnReload) return
+    const unsubscribe = activePersistence.subscribe?.(applyPersistenceSnapshot)
+    if (!settingsPersistOnReload) {
+      return () => {
+        unsubscribe?.()
+        activePersistence.setErrorHandler?.(undefined)
+      }
+    }
+
     const handleBeforeUnload = () => saveWorkspace()
     ownerWindow.addEventListener("beforeunload", handleBeforeUnload)
     return () => {
+      unsubscribe?.()
       ownerWindow.removeEventListener("beforeunload", handleBeforeUnload)
+      activePersistence.setErrorHandler?.(undefined)
       if (workspacePersistTimeoutRef.current !== null) {
         ownerWindow.clearTimeout(workspacePersistTimeoutRef.current)
         workspacePersistTimeoutRef.current = null
         saveWorkspace()
       }
     }
-  }, [ownerWindow, saveWorkspace, settingsPersistOnReload])
-
-  const previousPersistenceRef = useRef(activePersistence)
-  useEffect(() => {
-    if (previousPersistenceRef.current === activePersistence) return
-    previousPersistenceRef.current = activePersistence
-    applyPersistenceSnapshot(storedState ?? null)
-  }, [activePersistence, applyPersistenceSnapshot, storedState])
-
-  useEffect(() => {
-    const unsubscribe = activePersistence.subscribe?.(applyPersistenceSnapshot)
-    return unsubscribe
-  }, [activePersistence, applyPersistenceSnapshot])
+  }, [
+    activePersistence,
+    applyPersistenceSnapshot,
+    ownerWindow,
+    saveWorkspace,
+    settingsPersistOnReload,
+    workspacePersistTimeoutRef,
+  ])
 }

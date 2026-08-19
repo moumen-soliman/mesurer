@@ -15,13 +15,16 @@ export const useTextInspector = (
   }
   const textInspector = textInspectorRef.current
 
-  useEffect(() => {
+  const modeRef = useRef<ToolMode | null>(null)
+  if (modeRef.current !== toolMode) {
+    const previous = modeRef.current
+    modeRef.current = toolMode
     if (toolMode === "text-inspector") {
       textInspector.enable()
-    } else {
+    } else if (previous === "text-inspector") {
       textInspector.disable()
     }
-  }, [textInspector, toolMode])
+  }
 
   useEffect(() => {
     return () => {
