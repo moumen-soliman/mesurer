@@ -451,7 +451,7 @@ export const MeasurerOverlay = memo(function MeasurerOverlay({
           : isHovered
             ? guideColorHover
             : guideColorDefault;
-        const strokeWidth = Math.max(guideStyle.width, isSelected || isHovered ? 2 : guideStyle.width);
+        const strokeWidth = guideStyle.width;
         const isSolid = guideStyle.pattern === "solid";
         const backgroundImage = guideStyle.pattern === "solid"
           ? undefined
@@ -463,6 +463,8 @@ export const MeasurerOverlay = memo(function MeasurerOverlay({
             ? `${strokeWidth}px ${guideStyle.dashLength + guideStyle.gap}px`
             : `${guideStyle.dashLength + guideStyle.gap}px ${strokeWidth}px`
           : undefined;
+        const position = Math.round(guide.position);
+        const strokeOffset = GUIDE_HITBOX_SIZE / 2 - Math.floor((strokeWidth - 1) / 2);
 
         return (
           <div
@@ -472,14 +474,14 @@ export const MeasurerOverlay = memo(function MeasurerOverlay({
             style={
               guide.orientation === "vertical"
                 ? {
-                    left: guide.position - GUIDE_HITBOX_SIZE / 2,
+                    left: position - GUIDE_HITBOX_SIZE / 2,
                     top: 0,
                     width: GUIDE_HITBOX_SIZE,
                     height: "100%",
                     pointerEvents: guidePointerEvents ? "auto" : "none",
                   }
                 : {
-                    top: guide.position - GUIDE_HITBOX_SIZE / 2,
+                    top: position - GUIDE_HITBOX_SIZE / 2,
                     left: 0,
                     height: GUIDE_HITBOX_SIZE,
                     width: "100%",
@@ -495,7 +497,7 @@ export const MeasurerOverlay = memo(function MeasurerOverlay({
               style={
                 guide.orientation === "vertical"
                   ? {
-                      left: GUIDE_HITBOX_SIZE / 2 - 1,
+                      left: strokeOffset,
                       top: 0,
                       width: strokeWidth,
                       height: "100%",
@@ -505,7 +507,7 @@ export const MeasurerOverlay = memo(function MeasurerOverlay({
                       opacity: guideStyle.opacity,
                     }
                   : {
-                      top: GUIDE_HITBOX_SIZE / 2 - 1,
+                      top: strokeOffset,
                       left: 0,
                       height: strokeWidth,
                       width: "100%",

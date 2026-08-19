@@ -16,6 +16,9 @@ export const DistanceOverlayItem = memo(function DistanceOverlayItem({
   labelOffset,
   onRemove,
 }: DistanceOverlayItemProps) {
+  const showRectA = distance.rectA.width >= 1 && distance.rectA.height >= 1;
+  const showRectB = distance.rectB.width >= 1 && distance.rectB.height >= 1;
+
   return (
     <div
       className={
@@ -30,24 +33,28 @@ export const DistanceOverlayItem = memo(function DistanceOverlayItem({
           : undefined
       }
     >
-      <div
-        className="msr:absolute msr:rounded msr:border msr:border-[#2563eb]/70"
-        style={{
-          left: distance.rectA.left,
-          top: distance.rectA.top,
-          width: distance.rectA.width,
-          height: distance.rectA.height,
-        }}
-      />
-      <div
-        className="msr:absolute msr:rounded msr:border msr:border-[#2563eb]/70"
-        style={{
-          left: distance.rectB.left,
-          top: distance.rectB.top,
-          width: distance.rectB.width,
-          height: distance.rectB.height,
-        }}
-      />
+      {showRectA ? (
+        <div
+          className="msr:absolute msr:rounded msr:border msr:border-[#2563eb]/70"
+          style={{
+            left: distance.rectA.left,
+            top: distance.rectA.top,
+            width: distance.rectA.width,
+            height: distance.rectA.height,
+          }}
+        />
+      ) : null}
+      {showRectB ? (
+        <div
+          className="msr:absolute msr:rounded msr:border msr:border-[#2563eb]/70"
+          style={{
+            left: distance.rectB.left,
+            top: distance.rectB.top,
+            width: distance.rectB.width,
+            height: distance.rectB.height,
+          }}
+        />
+      ) : null}
       {distance.connectors.map((connector, index) =>
         Math.abs(connector.x1 - connector.x2) < 1 ? (
           <div

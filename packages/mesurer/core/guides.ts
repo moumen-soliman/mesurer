@@ -5,9 +5,10 @@ import type { Guide, Point, Rect } from "./types"
 
 export const getGuideRect = (guide: Guide, ownerWindow: Window = window): Rect => {
   const viewport = getViewportSize(ownerWindow)
+  const position = Math.round(guide.position)
   return guide.orientation === "vertical"
-    ? { left: guide.position, top: 0, width: 1, height: viewport.height }
-    : { left: 0, top: guide.position, width: viewport.width, height: 1 }
+    ? { left: position, top: 0, width: 0, height: viewport.height }
+    : { left: 0, top: position, width: viewport.width, height: 0 }
 }
 
 export const getGuideDistance = (guide: Guide, point: Point) =>
