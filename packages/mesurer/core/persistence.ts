@@ -36,6 +36,16 @@ export const DEFAULT_RULER_SETTINGS: RulerSettings = {
   edgeReveal: false,
 }
 
+export type ScreenshotSettings = {
+  copy: boolean
+  download: boolean
+}
+
+export const DEFAULT_SCREENSHOT_SETTINGS: ScreenshotSettings = {
+  copy: true,
+  download: false,
+}
+
 export type MesurerStoredSettings = {
   highlightColor?: string
   guideColor?: string
@@ -49,6 +59,7 @@ export type MesurerStoredSettings = {
   persistOnReload?: boolean
   guideStyle?: Partial<GuideStyle>
   rulerSettings?: Partial<RulerSettings>
+  screenshotSettings?: Partial<ScreenshotSettings>
 }
 
 export type MesurerStoredWorkspace = {
@@ -127,6 +138,16 @@ const normalizeRulerSettings = (value: unknown): RulerSettings | undefined => {
     opacity: typeof input.opacity === "number" ? Math.min(1, Math.max(0.2, input.opacity)) : DEFAULT_RULER_SETTINGS.opacity,
     edgeReveal: typeof input.edgeReveal === "boolean" ? input.edgeReveal : DEFAULT_RULER_SETTINGS.edgeReveal,
   }
+}
+
+const normalizeScreenshotSettings = (value: unknown): ScreenshotSettings | undefined => {
+  if (!value || typeof value !== "object") return undefined
+  const input = value as Record<string, unknown>
+  const copy = typeof input.copy === "boolean" ? input.copy : DEFAULT_SCREENSHOT_SETTINGS.copy
+  const download =
+    typeof input.download === "boolean" ? input.download : DEFAULT_SCREENSHOT_SETTINGS.download
+  if (!copy && !download) return { ...DEFAULT_SCREENSHOT_SETTINGS }
+  return { copy, download }
 }
 
 const isFiniteNumber = (value: unknown): value is number =>
@@ -216,6 +237,9 @@ export const normalizeStoredSettings = (value: unknown): MesurerStoredSettings =
     ...(typeof input.persistOnReload === "boolean" ? { persistOnReload: input.persistOnReload } : {}),
     ...(normalizeGuideStyle(input.guideStyle) ? { guideStyle: normalizeGuideStyle(input.guideStyle) } : {}),
     ...(normalizeRulerSettings(input.rulerSettings) ? { rulerSettings: normalizeRulerSettings(input.rulerSettings) } : {}),
+    ...(normalizeScreenshotSettings(input.screenshotSettings)
+      ? { screenshotSettings: normalizeScreenshotSettings(input.screenshotSettings) }
+      : {}),
   }
 }
 

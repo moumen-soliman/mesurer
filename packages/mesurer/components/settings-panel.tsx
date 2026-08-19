@@ -6,7 +6,7 @@ import type { ColorPickerFormat } from "../core/colors"
 import { colorToHex, parseCssColor } from "../core/colors"
 import { cn } from "../core/utils"
 import { Tooltip, useTooltip } from "./tooltip"
-import type { GuideStyle, RulerSettings } from "../core/persistence"
+import type { GuideStyle, RulerSettings, ScreenshotSettings } from "../core/persistence"
 
 type SettingsPanelProps = {
   ownerWindow: Window
@@ -34,6 +34,8 @@ type SettingsPanelProps = {
   setGuideStyle: Dispatch<SetStateAction<GuideStyle>>
   rulerSettings: RulerSettings
   setRulerSettings: Dispatch<SetStateAction<RulerSettings>>
+  screenshotSettings: ScreenshotSettings
+  setScreenshotSettings: Dispatch<SetStateAction<ScreenshotSettings>>
   activeTab: SettingsTab
   onTabChange: (tab: SettingsTab) => void
   onResetSettings: () => void
@@ -41,7 +43,7 @@ type SettingsPanelProps = {
 }
 
 const COLOR_FORMATS: ColorPickerFormat[] = ["hex", "rgb", "hsl", "oklch"]
-export type SettingsTab = "guides" | "select" | "color-picker" | "rulers" | "general"
+export type SettingsTab = "guides" | "select" | "color-picker" | "screenshot" | "rulers" | "general"
 const GUIDE_PATTERNS: Array<{ value: GuideStyle["pattern"]; label: string }> = [
   { value: "solid", label: "Solid" },
   { value: "dashed", label: "Dashed" },
@@ -381,6 +383,8 @@ export function SettingsPanel({
   setGuideStyle,
   rulerSettings,
   setRulerSettings,
+  screenshotSettings,
+  setScreenshotSettings,
   activeTab,
   onTabChange,
   onResetSettings,
@@ -405,6 +409,7 @@ export function SettingsPanel({
           ["guides", "Guides"],
           ["select", "Select"],
           ["color-picker", "Color"],
+          ["screenshot", "Camera"],
           ["rulers", "Rulers"],
           ["general", "General"],
         ] as const).map(([value, label]) => (
@@ -414,7 +419,7 @@ export function SettingsPanel({
             role="tab"
             aria-selected={activeTab === value}
             className={cn(
-              "mesurer-settings-tab msr:relative msr:flex msr:min-w-0 msr:flex-1 msr:appearance-none msr:items-center msr:justify-center msr:whitespace-nowrap msr:px-1.5 msr:py-0 msr:text-[10px] msr:font-medium msr:transition-colors msr:focus-visible:outline-none msr:focus-visible:shadow-[inset_0_0_0_1px_#0d99ff]",
+              "mesurer-settings-tab msr:relative msr:flex msr:min-w-0 msr:flex-1 msr:appearance-none msr:items-center msr:justify-center msr:overflow-hidden msr:text-ellipsis msr:whitespace-nowrap msr:px-1.5 msr:py-0 msr:text-[10px] msr:font-medium msr:transition-colors msr:focus-visible:outline-none msr:focus-visible:shadow-[inset_0_0_0_1px_#0d99ff]",
               activeTab === value
                 ? "msr:rounded-[5px] msr:bg-white msr:text-ink-900 msr:shadow-[0_0_0_1px_rgba(15,23,42,0.12)]"
                 : "msr:rounded-[5px] msr:text-ink-500 msr:hover:text-ink-700",
@@ -501,6 +506,33 @@ export function SettingsPanel({
             {COLOR_FORMATS.map((format) => <option key={format} value={format}>{format}</option>)}
           </select>
         </label>
+      </section> : null}
+
+      {activeTab === "screenshot" ? <section className="msr:grid msr:grid-cols-[78px_minmax(0,1fr)] msr:items-center msr:gap-x-3 msr:gap-y-1" aria-label="Camera settings">
+        <div className="msr:col-span-2">
+          <SettingsSwitch
+            label="Copy"
+            checked={screenshotSettings.copy}
+            onChange={(copy) =>
+              setScreenshotSettings((settings) => ({
+                copy,
+                download: copy ? settings.download : true,
+              }))
+            }
+          />
+        </div>
+        <div className="msr:col-span-2">
+          <SettingsSwitch
+            label="Download"
+            checked={screenshotSettings.download}
+            onChange={(download) =>
+              setScreenshotSettings((settings) => ({
+                download,
+                copy: download ? settings.copy : true,
+              }))
+            }
+          />
+        </div>
       </section> : null}
 
       {activeTab === "rulers" ? <section className="msr:grid msr:grid-cols-[78px_minmax(0,1fr)] msr:items-center msr:gap-x-3 msr:gap-y-1" aria-label="Ruler settings">

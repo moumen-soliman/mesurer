@@ -53,7 +53,9 @@ import {
 import { ScreenshotSelectOverlay } from "./components/screenshot-select-overlay";
 import {
   copyPngToClipboard,
+  createScreenshotFilename,
   cropPngToViewportRect,
+  downloadPng,
   hideNodesForCapture,
   MIN_SCREENSHOT_SELECTION,
   normalizeScreenshotRect,
@@ -71,7 +73,9 @@ import {
   type MesurerStoredWorkspace,
   type GuideStyle,
   DEFAULT_RULER_SETTINGS,
+  DEFAULT_SCREENSHOT_SETTINGS,
   type RulerSettings,
+  type ScreenshotSettings,
 } from "./core/persistence";
 
 export type MeasurerProps = {
@@ -414,6 +418,10 @@ function MeasurerClient({
     ...rulerSettingsDefault,
     ...persistedSettings.rulerSettings,
   });
+  const [settingsScreenshot, setSettingsScreenshot] = useState<ScreenshotSettings>({
+    ...DEFAULT_SCREENSHOT_SETTINGS,
+    ...persistedSettings.screenshotSettings,
+  });
   const [xrayVisible, setXrayVisible] = useState(xrayVisibleRef.current);
   const { clearGuideDragHold, scheduleGuideDragHold } = useGuideDragHold(ownerWindow);
   const [guidePreview, setGuidePreview] = useState<{
@@ -434,16 +442,19 @@ function MeasurerClient({
     setMultiMeasureEnabled(multiMeasureEnabledDefault);
     setSettingsGuideStyle({ ...guideStyleDefault });
     setSettingsRulerSettings({ ...rulerSettingsDefault });
+    setSettingsScreenshot({ ...DEFAULT_SCREENSHOT_SETTINGS });
   };
   const initialSettingsTab: SettingsTab = colorPickerActive
     ? "color-picker"
     : rulersVisible
       ? "rulers"
-      : toolMode === "guides"
-        ? "guides"
-        : toolMode === "select" || toolMode === "text-inspector"
-          ? "select"
-          : "general";
+      : screenshotActive
+        ? "screenshot"
+        : toolMode === "guides"
+          ? "guides"
+          : toolMode === "select" || toolMode === "text-inspector"
+            ? "select"
+            : "general";
   const [guideOrientation, setGuideOrientation] = useState<
     "vertical" | "horizontal"
   >(persistedState?.guideOrientation ?? "vertical");
@@ -503,6 +514,7 @@ function MeasurerClient({
       persistOnReload: settingsPersistOnReload,
       guideStyle: settingsGuideStyle,
       rulerSettings: settingsRulerSettings,
+      screenshotSettings: settingsScreenshot,
     });
   }, [
     multiMeasureEnabled,
@@ -518,6 +530,7 @@ function MeasurerClient({
     activePersistence,
     settingsGuideStyle,
     settingsRulerSettings,
+    settingsScreenshot,
   ]);
 
   useEffect(() => {
@@ -616,6 +629,9 @@ function MeasurerClient({
     if (settings.multiMeasureEnabled !== undefined) setMultiMeasureEnabled(settings.multiMeasureEnabled);
     if (settings.guideStyle !== undefined) setSettingsGuideStyle({ ...guideStyleDefault, ...settings.guideStyle });
     if (settings.rulerSettings !== undefined) setSettingsRulerSettings({ ...rulerSettingsDefault, ...settings.rulerSettings });
+    if (settings.screenshotSettings !== undefined) {
+      setSettingsScreenshot({ ...DEFAULT_SCREENSHOT_SETTINGS, ...settings.screenshotSettings });
+    }
 
     const workspace = snapshot.workspace;
     if (source?.workspace !== false && workspace && (settings.persistOnReload ?? settingsPersistOnReload)) {
@@ -932,14 +948,36 @@ function MeasurerClient({
         }
       })();
       void croppedPromise.catch(() => undefined);
-      const copyPromise = copyPngToClipboard(
-        croppedPromise,
-        ownerWindow.navigator.clipboard,
-      );
+      const shouldCopy = settingsScreenshot.copy;
+      const shouldDownload = settingsScreenshot.download;
+      const copyPromise = shouldCopy
+        ? copyPngToClipboard(croppedPromise, ownerWindow.navigator.clipboard)
+        : Promise.resolve();
       void (async () => {
         try {
           const cropped = await croppedPromise;
-          await copyPromise;
+          const results = await Promise.allSettled([
+            copyPromise,
+            shouldDownload
+              ? Promise.resolve(
+                  downloadPng(
+                    cropped,
+                    createScreenshotFilename(),
+                    ownerDocument,
+                    ownerWindow,
+                  ),
+                )
+              : Promise.resolve(),
+          ]);
+          const copyFailed = shouldCopy && results[0]?.status === "rejected";
+          const downloadFailed = shouldDownload && results[1]?.status === "rejected";
+          if (
+            (copyFailed && !shouldDownload) ||
+            (downloadFailed && !shouldCopy) ||
+            (copyFailed && downloadFailed)
+          ) {
+            throw new Error("Could not save screenshot");
+          }
           const nextUrl = URL.createObjectURL(cropped);
           setScreenshotPreviewUrl((previous) => {
             if (previous) URL.revokeObjectURL(previous);
@@ -953,7 +991,15 @@ function MeasurerClient({
         }
       })();
     },
-    [cancelScreenshotSelection, captureVisibleTab, ownerDocument, ownerWindow, overlayRef],
+    [
+      cancelScreenshotSelection,
+      captureVisibleTab,
+      ownerDocument,
+      ownerWindow,
+      overlayRef,
+      settingsScreenshot.copy,
+      settingsScreenshot.download,
+    ],
   );
 
   const toggleScreenshotSelection = useCallback(async () => {
@@ -1756,6 +1802,8 @@ function MeasurerClient({
          setGuideStyle={setSettingsGuideStyle}
          rulerSettings={settingsRulerSettings}
          setRulerSettings={setSettingsRulerSettings}
+         screenshotSettings={settingsScreenshot}
+         setScreenshotSettings={setSettingsScreenshot}
          settingsTab={settingsTab}
          setSettingsTab={setSettingsTab}
          onToggleSettings={toggleSettings}

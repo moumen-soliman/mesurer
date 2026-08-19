@@ -75,6 +75,28 @@ export const copyPngToClipboard = async (
   await target.write([new ClipboardItem({ "image/png": png })]);
 };
 
+export const createScreenshotFilename = (now = new Date()) => {
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `mesurer-${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.png`;
+};
+
+export const downloadPng = (
+  png: Blob,
+  filename: string,
+  ownerDocument: Document,
+  ownerWindow: Window,
+) => {
+  const url = URL.createObjectURL(png);
+  const link = ownerDocument.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.rel = "noopener";
+  ownerDocument.documentElement.append(link);
+  link.click();
+  link.remove();
+  ownerWindow.setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
+
 export const hideNodesForCapture = (nodes: Array<HTMLElement | null>) => {
   const previous = nodes.flatMap((node) => {
     if (!node) return [];

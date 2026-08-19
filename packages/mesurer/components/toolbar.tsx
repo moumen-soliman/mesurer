@@ -12,7 +12,7 @@ import {
 } from "react";
 import type { ToolMode } from "../core/types";
 import type { ColorPickerFormat } from "../core/colors";
-import type { GuideStyle, RulerSettings } from "../core/persistence";
+import type { GuideStyle, RulerSettings, ScreenshotSettings } from "../core/persistence";
 import { cn } from "../core/utils";
 import { ScreenshotPreview } from "./screenshot-preview";
 import { SettingsPanel, type SettingsTab } from "./settings-panel";
@@ -80,6 +80,8 @@ type ToolbarProps = {
   setGuideStyle: Dispatch<SetStateAction<GuideStyle>>;
   rulerSettings: RulerSettings;
   setRulerSettings: Dispatch<SetStateAction<RulerSettings>>;
+  screenshotSettings: ScreenshotSettings;
+  setScreenshotSettings: Dispatch<SetStateAction<ScreenshotSettings>>;
   settingsTab: SettingsTab;
   setSettingsTab: (tab: SettingsTab) => void;
   onToggleSettings: () => void;
@@ -372,6 +374,8 @@ function ToolbarComponent(
     setGuideStyle,
     rulerSettings,
     setRulerSettings,
+    screenshotSettings,
+    setScreenshotSettings,
     settingsTab,
     setSettingsTab,
     onToggleSettings,
@@ -830,7 +834,7 @@ function ToolbarComponent(
         {settingsOpen ? (
           <div
             className={cn(
-              "mesurer-menu-surface msr:absolute msr:-right-1 msr:z-[70] msr:box-border msr:w-[272px] msr:max-w-[calc(100vw-16px)] msr:overflow-x-hidden msr:rounded-lg msr:border msr:border-ink-200 msr:bg-white msr:p-3",
+              "mesurer-menu-surface msr:absolute msr:-right-1 msr:z-[70] msr:box-border msr:w-[320px] msr:max-w-[calc(100vw-16px)] msr:overflow-x-hidden msr:rounded-lg msr:border msr:border-ink-200 msr:bg-white msr:p-3",
               menuSide === "bottom"
                 ? "msr:top-full msr:mt-2"
                 : "msr:bottom-full msr:mb-2",
@@ -869,6 +873,8 @@ function ToolbarComponent(
               setGuideStyle={setGuideStyle}
               rulerSettings={rulerSettings}
               setRulerSettings={setRulerSettings}
+              screenshotSettings={screenshotSettings}
+              setScreenshotSettings={setScreenshotSettings}
               activeTab={settingsTab}
               onTabChange={setSettingsTab}
               onResetSettings={onResetSettings}
@@ -884,7 +890,7 @@ function ToolbarComponent(
           aria-live="polite"
           className="mesurer-toast-surface msr:pointer-events-none msr:absolute msr:top-full msr:left-1/2 msr:z-10 msr:mt-2 msr:-translate-x-1/2 msr:whitespace-nowrap msr:rounded-[10px] msr:bg-white msr:px-3 msr:py-2 msr:text-[12px] msr:leading-4 msr:text-black"
         >
-          Couldn't copy screenshot
+          Couldn't {screenshotSettings.copy && !screenshotSettings.download ? "copy" : screenshotSettings.download && !screenshotSettings.copy ? "download" : "save"} screenshot
         </div>
       ) : null}
     </div>
