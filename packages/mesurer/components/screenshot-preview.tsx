@@ -8,6 +8,7 @@ type ScreenshotPreviewProps = {
   url: string;
   ownerWindow: Window;
   side: "top" | "bottom";
+  label: string;
   onExited: () => void;
 };
 
@@ -15,6 +16,7 @@ export function ScreenshotPreview({
   url,
   ownerWindow,
   side,
+  label,
   onExited,
 }: ScreenshotPreviewProps) {
   const [visible, setVisible] = useState(false);
@@ -46,7 +48,7 @@ export function ScreenshotPreview({
   return (
     <div
       role="status"
-      aria-label="Screenshot copied"
+      aria-label={label}
       data-side={side}
       data-visible={visible && !exiting ? "true" : "false"}
       className={cn(

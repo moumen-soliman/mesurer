@@ -239,6 +239,7 @@ function MeasurerClient({
   const screenshotOriginRef = useRef<{ x: number; y: number } | null>(null);
   const capturingScreenshotRef = useRef(false);
   const preparingScreenshotRef = useRef(false);
+  const screenshotPreviewUrlRef = useRef<string | null>(null);
   const selectionAnimationCleanupTimeoutRef = useRef<number | null>(null);
   const guideDragRef = useRef<{
     id: string;
@@ -902,6 +903,17 @@ function MeasurerClient({
     dismissScreenshotPreview();
   }, [cancelScreenshotSelection, dismissScreenshotPreview]);
 
+  useEffect(() => {
+    screenshotPreviewUrlRef.current = screenshotPreviewUrl;
+  }, [screenshotPreviewUrl]);
+
+  useEffect(() => {
+    return () => {
+      const url = screenshotPreviewUrlRef.current;
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, []);
+
   const openColorPicker = useCallback(async () => {
     closeScreenshotUi();
     const EyeDropper = (ownerWindow as WindowWithEyeDropper).EyeDropper;
@@ -1024,11 +1036,12 @@ function MeasurerClient({
 
   const toggleScreenshotSelection = useCallback(async () => {
     if (screenshotActive) {
-      cancelScreenshotSelection();
+      closeScreenshotUi();
       return;
     }
     if (preparingScreenshotRef.current) return;
     preparingScreenshotRef.current = true;
+    dismissScreenshotPreview();
     try {
       if (!captureVisibleTab) {
         await prepareScreenshotCapture(ownerDocument, ownerWindow);
@@ -1049,8 +1062,9 @@ function MeasurerClient({
       preparingScreenshotRef.current = false;
     }
   }, [
-    cancelScreenshotSelection,
     captureVisibleTab,
+    closeScreenshotUi,
+    dismissScreenshotPreview,
     ownerDocument,
     ownerWindow,
     screenshotActive,
@@ -1058,8 +1072,8 @@ function MeasurerClient({
   ]);
 
   useEffect(() => {
-    if (!enabled) cancelScreenshotSelection();
-  }, [cancelScreenshotSelection, enabled]);
+    if (!enabled) closeScreenshotUi();
+  }, [closeScreenshotUi, enabled]);
 
   const handleScreenshotPointerDown = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -1163,8 +1177,8 @@ function MeasurerClient({
     onInteract: () => setToolbarActive(true),
     onColorPicker: openColorPicker,
     onScreenshot: toggleScreenshotSelection,
-    onCloseScreenshot: cancelScreenshotSelection,
-    isScreenshotActive: () => screenshotActive,
+    onCloseScreenshot: closeScreenshotUi,
+    isScreenshotActive: () => screenshotActive || Boolean(screenshotPreviewUrl),
     onToggleXray: () => setXrayVisible((previous) => !previous),
     onToggleSettings: toggleSettings,
     isSettingsOpen: () => settingsOpen,
@@ -1790,7 +1804,7 @@ function MeasurerClient({
         onColorPickerClick={openColorPicker}
         screenshotActive={screenshotActive}
         onScreenshotClick={toggleScreenshotSelection}
-        onCancelScreenshot={cancelScreenshotSelection}
+        onCancelScreenshot={closeScreenshotUi}
         settingsOpen={settingsOpen}
         setSettingsOpen={setSettingsOpen}
         highlightColor={settingsHighlightColor}

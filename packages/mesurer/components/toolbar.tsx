@@ -808,6 +808,13 @@ function ToolbarComponent(
           url={screenshotPreviewUrl}
           ownerWindow={eventTarget}
           side={tooltipSide}
+          label={
+            screenshotSettings.copy && !screenshotSettings.download
+              ? "Screenshot copied"
+              : screenshotSettings.download && !screenshotSettings.copy
+                ? "Screenshot downloaded"
+                : "Screenshot saved"
+          }
           onExited={onScreenshotPreviewExited}
         />
       ) : null}
