@@ -143,7 +143,7 @@ function HomeContent() {
     {
       icon: <CameraIcon size={16} weight="light" />,
       title: "Screenshot",
-      description: "Drag a region and copy it — Chrome extension",
+      description: "Capture a visible-tab region to copy or download",
     },
     {
       icon: <TextAaIcon size={16} weight="light" />,

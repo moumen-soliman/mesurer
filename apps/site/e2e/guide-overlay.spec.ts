@@ -291,6 +291,49 @@ test("screenshot selection captures and copies the selected region", async ({ pa
   await expect(selection).toHaveCount(0);
 });
 
+test("screenshot settings support download-only capture", async ({ page }) => {
+  await page.addInitScript(() => {
+    const onePixelPng =
+      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
+    Object.defineProperty(window, "chrome", {
+      configurable: true,
+      value: {
+        runtime: {
+          id: "test-extension",
+          lastError: undefined,
+          sendMessage: (_message: unknown, callback: (response: unknown) => void) =>
+            callback({ ok: true, dataUrl: onePixelPng }),
+        },
+      },
+    });
+  });
+  await page.goto("/e2e/fixtures/guide-overlay.html");
+  await expect(page.getByRole("button", { name: "Screenshot (C)" })).toBeVisible();
+  await page.getByRole("button", { name: "Settings" }).click();
+  const dialog = page.getByRole("dialog", { name: "Settings" });
+  await dialog.getByRole("tab", { name: "Screenshot" }).click();
+  await dialog.getByRole("switch", { name: "Copy" }).click();
+  await expect(dialog.getByRole("switch", { name: "Copy" })).toHaveAttribute(
+    "aria-checked",
+    "false",
+  );
+  await expect(dialog.getByRole("switch", { name: "Download" })).toHaveAttribute(
+    "aria-checked",
+    "true",
+  );
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("c");
+  const selection = page.getByRole("application", { name: "Screenshot selection" });
+  await expect(selection).toBeVisible();
+  await page.mouse.move(280, 220);
+  await page.mouse.down();
+  await page.mouse.move(120, 140);
+  const downloadPromise = page.waitForEvent("download");
+  await page.mouse.up();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(/^mesurer-.*\.png$/);
+});
+
 test("disabling the measurer closes screenshot selection", async ({ page }) => {
   await page.goto("/e2e/fixtures/guide-overlay.html");
   await expect(page.getByRole("button", { name: "Screenshot (C)" })).toBeVisible();

@@ -329,6 +329,14 @@ function ToolbarComponent(
     };
   }, [eventTarget, guideMenuOpen, guideOrientation, settingsOpen, updateMenuAlign]);
 
+  const toolbarWidth = settingsRef.current?.parentElement?.offsetWidth ?? 0;
+  const toastAlignment =
+    position.x <= 8
+      ? "msr:left-0"
+      : position.x + toolbarWidth >= eventTarget.innerWidth - 8
+        ? "msr:right-0"
+        : "msr:left-1/2 msr:-translate-x-1/2";
+
   return (
     <div
       className="msr:absolute msr:z-[90]"
@@ -338,6 +346,7 @@ function ToolbarComponent(
         visibility: screenshotActive ? "hidden" : undefined,
       }}
     >
+    <div className="msr:relative">
     <div
       ref={ref}
       className="mesurer-toolbar-surface msr:pointer-events-auto msr:flex msr:items-center msr:gap-1 msr:rounded-[12px] msr:bg-[#fff] msr:p-1 msr:outline msr:outline-transparent"
@@ -647,11 +656,14 @@ function ToolbarComponent(
         <div
           role="status"
           aria-live="polite"
-          className="mesurer-toast-surface msr:pointer-events-none msr:absolute msr:top-full msr:left-1/2 msr:z-10 msr:mt-2 msr:-translate-x-1/2 msr:whitespace-nowrap msr:rounded-[10px] msr:bg-white msr:px-3 msr:py-2 msr:text-[12px] msr:leading-4 msr:text-black"
+          className={`mesurer-toast-surface msr:pointer-events-none msr:absolute msr:top-full msr:z-10 msr:mt-2 msr:box-border msr:rounded-[10px] msr:bg-white msr:px-3 msr:py-2 msr:text-center msr:text-[12px] msr:leading-4 msr:text-black msr:whitespace-normal msr:text-pretty ${toastAlignment}`}
         >
-          Couldn't {screenshotCopy && !screenshotDownload ? "copy" : screenshotDownload && !screenshotCopy ? "download" : "save"} screenshot
+          Screenshot failed.
+          <br />
+          Check permissions and try again.
         </div>
       ) : null}
+    </div>
     </div>
   );
 }

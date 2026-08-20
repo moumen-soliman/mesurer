@@ -149,7 +149,15 @@ export const CameraIcon = ({ size = 20, ...props }: IconProps) => (
       strokeLinecap="round"
       strokeLinejoin="round"
       strokeWidth="12"
-      d="M80 72 94 48h68l14 24h26a16 16 0 0 1 16 16v104a16 16 0 0 1-16 16H54a16 16 0 0 1-16-16V88a16 16 0 0 1 16-16Zm48 40a32 32 0 1 1 0 64 32 32 0 0 1 0-64Z"
+      d="M216 80h-40l-16-24H96L80 80H40a16 16 0 0 0-16 16v96a16 16 0 0 0 16 16h176a16 16 0 0 0 16-16V96a16 16 0 0 0-16-16Z"
+    />
+    <circle
+      cx="128"
+      cy="136"
+      r="36"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="12"
     />
   </IconBase>
 )

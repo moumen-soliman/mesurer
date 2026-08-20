@@ -26,6 +26,7 @@ This generates the extension files in `apps/extension/dist`.
 - Open any regular website page.
 - Click the Mesurer extension icon to toggle the toolbar on/off.
 - Screenshot on mesurer.dev or localhost uses the extension when it is installed, so Chrome will not ask to share the tab.
+- Screenshot on other pages uses the extension's visible-tab capture API after the extension is activated for that tab.
 - Use Select, Guides, Rulers, Text Inspector, X-ray, Color picker, and Screenshot from the toolbar.
 - Open Settings to configure colors, guide styles, ruler behavior, formats, and persistence.
 - Use Clear workspace in Settings to remove guides and measurements for the current tab.

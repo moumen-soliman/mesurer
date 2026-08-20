@@ -436,7 +436,7 @@ export function SettingsPanel({
           ["rulers", "Rulers"],
           ["guides", "Guides"],
           ["color-picker", "Color"],
-          ["screenshot", "Camera"],
+            ["screenshot", "Screenshot"],
           ["general", "General"],
         ] as const).map(([value, label]) => (
           <button
@@ -534,7 +534,7 @@ export function SettingsPanel({
         </label>
       </section> : null}
 
-      {activeTab === "screenshot" ? <section className="msr:grid msr:grid-cols-[78px_minmax(0,1fr)] msr:items-center msr:gap-x-3 msr:gap-y-1" aria-label="Camera settings">
+      {activeTab === "screenshot" ? <section className="msr:grid msr:grid-cols-[78px_minmax(0,1fr)] msr:items-center msr:gap-x-3 msr:gap-y-1" aria-label="Screenshot settings">
         <div className="msr:col-span-2">
           <SettingsSwitch
             label="Copy"
