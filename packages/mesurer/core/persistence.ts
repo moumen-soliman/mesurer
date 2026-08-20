@@ -119,15 +119,18 @@ type StoredRecord = {
 const isFormat = (value: unknown): value is ColorPickerFormat =>
   value === "hex" || value === "rgb" || value === "hsl" || value === "oklch"
 
+const clampToTwoDecimals = (value: number, min: number, max: number) =>
+  Number(Math.min(max, Math.max(min, value)).toFixed(2))
+
 const normalizeGuideStyle = (value: unknown): GuideStyle | undefined => {
   if (!value || typeof value !== "object") return undefined
   const input = value as Record<string, unknown>
   return {
-    opacity: typeof input.opacity === "number" ? Math.min(1, Math.max(0, input.opacity)) : DEFAULT_GUIDE_STYLE.opacity,
-    width: typeof input.width === "number" ? Math.min(4, Math.max(1, input.width)) : DEFAULT_GUIDE_STYLE.width,
+    opacity: typeof input.opacity === "number" && Number.isFinite(input.opacity) ? clampToTwoDecimals(input.opacity, 0, 1) : DEFAULT_GUIDE_STYLE.opacity,
+    width: typeof input.width === "number" && Number.isFinite(input.width) ? clampToTwoDecimals(input.width, 0.01, 4) : DEFAULT_GUIDE_STYLE.width,
     pattern: input.pattern === "dashed" || input.pattern === "dotted" ? input.pattern : DEFAULT_GUIDE_STYLE.pattern,
-    dashLength: typeof input.dashLength === "number" ? Math.min(24, Math.max(2, input.dashLength)) : DEFAULT_GUIDE_STYLE.dashLength,
-    gap: typeof input.gap === "number" ? Math.min(24, Math.max(0, input.gap)) : DEFAULT_GUIDE_STYLE.gap,
+    dashLength: typeof input.dashLength === "number" && Number.isFinite(input.dashLength) ? clampToTwoDecimals(input.dashLength, 2, 24) : DEFAULT_GUIDE_STYLE.dashLength,
+    gap: typeof input.gap === "number" && Number.isFinite(input.gap) ? clampToTwoDecimals(input.gap, 0, 24) : DEFAULT_GUIDE_STYLE.gap,
   }
 }
 
@@ -135,7 +138,7 @@ const normalizeRulerSettings = (value: unknown): RulerSettings | undefined => {
   if (!value || typeof value !== "object") return undefined
   const input = value as Record<string, unknown>
   return {
-    opacity: typeof input.opacity === "number" ? Math.min(1, Math.max(0.2, input.opacity)) : DEFAULT_RULER_SETTINGS.opacity,
+    opacity: typeof input.opacity === "number" && Number.isFinite(input.opacity) ? clampToTwoDecimals(input.opacity, 0.2, 1) : DEFAULT_RULER_SETTINGS.opacity,
     edgeReveal: typeof input.edgeReveal === "boolean" ? input.edgeReveal : DEFAULT_RULER_SETTINGS.edgeReveal,
   }
 }

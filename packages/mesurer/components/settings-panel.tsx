@@ -68,6 +68,9 @@ const GUIDE_PATTERNS: Array<{ value: GuideStyle["pattern"]; label: string }> = [
   { value: "dashed", label: "Dashed" },
   { value: "dotted", label: "Dotted" },
 ]
+
+const roundToTwo = (value: number) => Number(value.toFixed(2))
+
 function ControlShell({ left, right }: { left: ReactNode; right: ReactNode }) {
   return (
     <div
@@ -118,6 +121,7 @@ function SliderControl({
   step,
   value,
   onChange,
+  inputMin = min,
   formatValue = (currentValue) => String(currentValue),
   parseInput = (input) => Number(input),
 }: {
@@ -127,20 +131,24 @@ function SliderControl({
   step: number
   value: number
   onChange: (value: number) => void
+  inputMin?: number
   formatValue?: (value: number) => string
   parseInput?: (input: string) => number
 }) {
   const thumbSize = 12
   const thumbInset = 8
-  const percentage = ((value - min) / (max - min)) * 100
+  const sliderValue = Math.min(max, Math.max(min, value))
+  const percentage = ((sliderValue - min) / (max - min)) * 100
   const [draftValue, setDraftValue] = useState(formatValue(value))
   const [editing, setEditing] = useState(false)
   const commitDraft = () => {
     const parsed = parseInput(draftValue)
     if (Number.isFinite(parsed)) {
-      onChange(Math.min(max, Math.max(min, parsed)))
+      onChange(roundToTwo(Math.min(max, Math.max(inputMin, parsed))))
     }
-    const next = Number.isFinite(parsed) ? Math.min(max, Math.max(min, parsed)) : value
+    const next = Number.isFinite(parsed)
+      ? roundToTwo(Math.min(max, Math.max(inputMin, parsed)))
+      : value
     setDraftValue(formatValue(next))
     setEditing(false)
   }
@@ -150,8 +158,11 @@ function SliderControl({
     const usableWidth = Math.max(1, rect.width - thumbInset * 2)
     const ratio = Math.min(1, Math.max(0, (event.clientX - rect.left - thumbInset) / usableWidth))
     const rawValue = min + ratio * (max - min)
-    const steppedValue = Math.round((rawValue - min) / step) * step + min
-    onChange(Number(steppedValue.toFixed(4)))
+    const steppedValue =
+      step === 1
+        ? Math.round(rawValue)
+        : Math.round((rawValue - min) / step) * step + min
+    onChange(roundToTwo(Math.min(max, Math.max(min, steppedValue))))
   }
 
   return (
@@ -206,7 +217,7 @@ function SliderControl({
             aria-label={label}
             aria-valuemin={min}
             aria-valuemax={max}
-            aria-valuenow={value}
+            aria-valuenow={sliderValue}
             aria-orientation="horizontal"
             onKeyDown={(event) => {
               event.stopPropagation()
@@ -215,7 +226,7 @@ function SliderControl({
               else if (event.key === "End") onChange(max)
               else if (direction) {
                 event.preventDefault()
-                onChange(Number(Math.min(max, Math.max(min, value + direction * step)).toFixed(4)))
+               onChange(roundToTwo(Math.min(max, Math.max(inputMin, sliderValue + direction * step))))
               } else return
               event.preventDefault()
             }}
@@ -237,7 +248,7 @@ function SliderControl({
             const nextDraft = event.target.value
             setDraftValue(nextDraft)
             const next = parseInput(nextDraft)
-            if (Number.isFinite(next)) onChange(Math.min(max, Math.max(min, next)))
+             if (Number.isFinite(next)) onChange(roundToTwo(Math.min(max, Math.max(inputMin, next))))
           }}
           onPointerDown={(event) => event.stopPropagation()}
           onClick={(event) => event.stopPropagation()}
@@ -251,7 +262,7 @@ function SliderControl({
               const current = parseInput(event.currentTarget.value)
               const direction = event.key === "ArrowUp" ? 1 : -1
               const next = Number(
-                Math.min(max, Math.max(min, (Number.isFinite(current) ? current : value) + direction * step)).toFixed(4),
+                roundToTwo(Math.min(max, Math.max(inputMin, sliderValue + direction * step))),
               )
               setDraftValue(formatValue(next))
               onChange(next)
@@ -461,7 +472,7 @@ export function SettingsPanel({
 
       {activeTab === "guides" ? <section className="msr:grid msr:grid-cols-[78px_150px] msr:items-center msr:gap-x-3 msr:gap-y-1" aria-label="Guide settings">
         <ColorField label="Color" value={guideColor} fallback="#f97316" ownerWindow={ownerWindow} onChange={setGuideColor} />
-        <SliderControl label="Weight" min={1} max={4} step={1} value={guideStyle.width} formatValue={(value) => `${value}px`} parseInput={(input) => Number.parseFloat(input)} onChange={(value) => setGuideStyle((style) => ({ ...style, width: value }))} />
+        <SliderControl label="Weight" min={1} inputMin={0.01} max={4} step={1} value={guideStyle.width} formatValue={(value) => `${value}px`} parseInput={(input) => Number.parseFloat(input)} onChange={(value) => setGuideStyle((style) => ({ ...style, width: value }))} />
         <div className="msr:col-span-2 msr:grid msr:grid-cols-[78px_150px] msr:items-center msr:gap-3">
           <span className="msr:text-[12px] msr:text-ink-700">Pattern</span>
           <div className="msr:flex msr:gap-1" role="radiogroup" aria-label="Guide pattern" onMouseLeave={patternTooltip.onTooltipContainerLeave}>
@@ -493,7 +504,7 @@ export function SettingsPanel({
         </div>
         {guideStyle.pattern !== "solid" ? (
           <>
-            <SliderControl label="Length" min={2} max={24} step={1} value={guideStyle.dashLength} formatValue={(value) => `${value}px`} parseInput={(input) => Number.parseFloat(input)} onChange={(value) => setGuideStyle((style) => ({ ...style, dashLength: value }))} />
+        <SliderControl label="Length" min={2} max={24} step={1} value={guideStyle.dashLength} formatValue={(value) => `${value}px`} parseInput={(input) => Number.parseFloat(input)} onChange={(value) => setGuideStyle((style) => ({ ...style, dashLength: value }))} />
             <SliderControl label="Gap" min={0} max={24} step={1} value={guideStyle.gap} formatValue={(value) => `${value}px`} parseInput={(input) => Number.parseFloat(input)} onChange={(value) => setGuideStyle((style) => ({ ...style, gap: value }))} />
           </>
         ) : null}
