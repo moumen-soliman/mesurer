@@ -601,7 +601,6 @@ function MeasurerClient({
   const screenshot = useScreenshot({
     ownerDocument,
     ownerWindow,
-    toolbarRef,
     overlayRef,
     captureVisibleTab,
     settings: settingsScreenshot,

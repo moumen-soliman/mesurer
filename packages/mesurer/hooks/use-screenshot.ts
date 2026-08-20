@@ -29,7 +29,6 @@ const SCREENSHOT_ERROR_MS = 2500
 type UseScreenshotOptions = {
   ownerDocument: Document
   ownerWindow: Window
-  toolbarRef: RefObject<HTMLDivElement | null>
   overlayRef: RefObject<HTMLDivElement | null>
   captureVisibleTab?: () => Promise<Blob>
   settings: ScreenshotSettings
@@ -41,7 +40,6 @@ type UseScreenshotOptions = {
 export const useScreenshot = ({
   ownerDocument,
   ownerWindow,
-  toolbarRef,
   overlayRef,
   captureVisibleTab,
   settings,
@@ -53,6 +51,8 @@ export const useScreenshot = ({
   const screenshotOriginRef = useRef<{ x: number; y: number } | null>(null)
   const capturingScreenshotRef = useRef(false)
   const preparingScreenshotRef = useRef(false)
+  const captureOperationRef = useRef(0)
+  const capturingOperationRef = useRef<number | null>(null)
   const screenshotPreviewUrlRef = useRef<string | null>(null)
   const screenshotErrorTimeoutRef = useRef<number | null>(null)
 
@@ -88,6 +88,7 @@ export const useScreenshot = ({
   }, [])
 
   const closeUi = useCallback(() => {
+    captureOperationRef.current += 1
     cancelSelection()
     dismissPreview()
     releaseScreenshotCapture(ownerWindow)
@@ -95,6 +96,7 @@ export const useScreenshot = ({
 
   useEffect(() => {
     return () => {
+      captureOperationRef.current += 1
       if (screenshotErrorTimeoutRef.current !== null) {
         ownerWindow.clearTimeout(screenshotErrorTimeoutRef.current)
       }
@@ -108,9 +110,10 @@ export const useScreenshot = ({
     (nextRect: ScreenshotRect) => {
       if (capturingScreenshotRef.current) return
       capturingScreenshotRef.current = true
+      const operationId = ++captureOperationRef.current
+      capturingOperationRef.current = operationId
       setError(false)
       const restore = hideNodesForCapture([
-        toolbarRef.current,
         screenshotOverlayRef.current,
         overlayRef.current?.querySelector<HTMLElement>(".mesurer-color-picker") ??
           null,
@@ -119,24 +122,19 @@ export const useScreenshot = ({
         ) ?? null,
       ])
       const croppedPromise = (async () => {
-        try {
-          await waitForNextPaint(ownerWindow)
-          const blob = captureVisibleTab
-            ? await captureVisibleTab()
-            : await captureVisibleTabPng(ownerDocument, ownerWindow)
-          return cropPngToViewportRect(
-            blob,
-            nextRect,
-            {
-              width: ownerWindow.innerWidth,
-              height: ownerWindow.innerHeight,
-            },
-            ownerDocument,
-          )
-        } finally {
-          restore()
-          releaseScreenshotCapture(ownerWindow)
-        }
+        await waitForNextPaint(ownerWindow)
+        const blob = captureVisibleTab
+          ? await captureVisibleTab()
+          : await captureVisibleTabPng(ownerDocument, ownerWindow)
+        return cropPngToViewportRect(
+          blob,
+          nextRect,
+          {
+            width: ownerWindow.innerWidth,
+            height: ownerWindow.innerHeight,
+          },
+          ownerDocument,
+        )
       })()
       void croppedPromise.catch(() => undefined)
       const shouldCopy = settings.copy
@@ -147,6 +145,7 @@ export const useScreenshot = ({
       void (async () => {
         try {
           const cropped = await croppedPromise
+          if (captureOperationRef.current !== operationId) return
           const results = await Promise.allSettled([
             copyPromise,
             shouldDownload
@@ -170,16 +169,28 @@ export const useScreenshot = ({
           ) {
             throw new Error("Could not save screenshot")
           }
+          if (captureOperationRef.current !== operationId) return
           const nextUrl = URL.createObjectURL(cropped)
           setPreviewUrl((previous) => {
             if (previous) URL.revokeObjectURL(previous)
             return nextUrl
           })
         } catch {
-          flashError()
+          if (captureOperationRef.current === operationId) {
+            flashError()
+          }
         } finally {
-          capturingScreenshotRef.current = false
-          cancelSelection()
+          const ownsCapture = capturingOperationRef.current === operationId
+          if (ownsCapture) {
+            capturingScreenshotRef.current = false
+            capturingOperationRef.current = null
+          }
+          if (captureOperationRef.current === operationId) {
+            cancelSelection()
+            ownerWindow.requestAnimationFrame(restore)
+          } else {
+            restore()
+          }
         }
       })()
     },
@@ -192,7 +203,6 @@ export const useScreenshot = ({
       overlayRef,
       settings.copy,
       settings.download,
-      toolbarRef,
     ],
   )
 
@@ -308,6 +318,7 @@ export const useScreenshot = ({
       if (event.currentTarget.hasPointerCapture(event.pointerId)) {
         event.currentTarget.releasePointerCapture(event.pointerId)
       }
+      captureOperationRef.current += 1
       cancelSelection()
     },
     [cancelSelection],

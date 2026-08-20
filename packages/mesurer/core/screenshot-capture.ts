@@ -4,6 +4,15 @@ const CAPTURE_BRIDGE_PONG = "mesurer:capture-bridge-pong";
 const CAPTURE_BRIDGE_REQUEST = "mesurer:capture-bridge-request";
 const CAPTURE_BRIDGE_RESPONSE = "mesurer:capture-bridge-response";
 
+const canUseCaptureBridge = (ownerWindow: Window) => {
+  const { hostname, protocol } = ownerWindow.location;
+  return (
+    hostname === "mesurer.dev" ||
+    (protocol === "http:" &&
+      (hostname === "localhost" || hostname === "127.0.0.1"))
+  );
+};
+
 type CaptureOk = { ok: true; dataUrl: string };
 type CaptureFail = { ok: false; error?: string };
 type CaptureResponse = CaptureOk | CaptureFail;
@@ -161,6 +170,7 @@ const pingCaptureBridge = (ownerWindow: Window) =>
     const origin = ownerWindow.location.origin;
     const onMessage = (event: MessageEvent) => {
       if (event.source !== ownerWindow) return;
+      if (event.origin !== origin) return;
       if (event.data?.type !== CAPTURE_BRIDGE_PONG || event.data.id !== id) {
         return;
       }
@@ -182,6 +192,7 @@ const captureViaBridge = (ownerWindow: Window) =>
     const origin = ownerWindow.location.origin;
     const onMessage = (event: MessageEvent) => {
       if (event.source !== ownerWindow) return;
+      if (event.origin !== origin) return;
       if (event.data?.type !== CAPTURE_BRIDGE_RESPONSE || event.data.id !== id) {
         return;
       }
@@ -206,7 +217,9 @@ export const prepareScreenshotCapture = async (
   ownerWindow: Window,
 ) => {
   if (getExtensionRuntime()) return;
-  if (await pingCaptureBridge(ownerWindow)) return;
+  if (canUseCaptureBridge(ownerWindow) && (await pingCaptureBridge(ownerWindow))) {
+    return;
+  }
   await startTabCapture(ownerDocument, ownerWindow);
 };
 
@@ -216,7 +229,10 @@ export const captureVisibleTabPng = async (
 ) => {
   const runtime = getExtensionRuntime();
   if (runtime) return captureViaExtension(runtime);
-  if (await pingCaptureBridge(ownerWindow)) {
+  if (
+    canUseCaptureBridge(ownerWindow) &&
+    (await pingCaptureBridge(ownerWindow))
+  ) {
     const bridged = await captureViaBridge(ownerWindow);
     if (bridged) return bridged;
   }
