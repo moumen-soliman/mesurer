@@ -1,5 +1,6 @@
 import { useEffect, useRef, type Dispatch, type RefObject, type SetStateAction } from "react"
 import { GUIDE_HITBOX_SIZE } from "../core/constants"
+import { getSnapGuidePosition } from "../core/guides"
 import type { Guide, ToolMode } from "../core/types"
 
 type GuideDrag = {
@@ -17,8 +18,10 @@ type UseGuideWindowEventsOptions = {
   settingsOpen: boolean
   toolMode: ToolMode
   toolbarActive: boolean
+  snapGuidesEnabled: boolean
   guides: Guide[]
   toolbarRef: RefObject<HTMLDivElement | null>
+  overlayRef: RefObject<HTMLDivElement | null>
   createActionCommit: () => () => void
   setGuides: Dispatch<SetStateAction<Guide[]>>
   setSelectedGuideIds: Dispatch<SetStateAction<string[]>>
@@ -32,8 +35,10 @@ export const useGuideWindowEvents = ({
   settingsOpen,
   toolMode,
   toolbarActive,
+  snapGuidesEnabled,
   guides,
   toolbarRef,
+  overlayRef,
   createActionCommit,
   setGuides,
   setSelectedGuideIds,
@@ -50,24 +55,28 @@ export const useGuideWindowEvents = ({
     settingsOpen,
     toolMode,
     toolbarActive,
+    snapGuidesEnabled,
     guides,
     createActionCommit,
     setGuides,
     setSelectedGuideIds,
     setToolbarActive,
     toolbarRef,
+    overlayRef,
   })
   optionsRef.current = {
     enabled,
     settingsOpen,
     toolMode,
     toolbarActive,
+    snapGuidesEnabled,
     guides,
     createActionCommit,
     setGuides,
     setSelectedGuideIds,
     setToolbarActive,
     toolbarRef,
+    overlayRef,
   }
 
   if (!enabled && guideUserSelectRef.current !== null) {
@@ -114,7 +123,7 @@ export const useGuideWindowEvents = ({
           target instanceof OwnerElement &&
           target.hasAttribute("data-mesurer-guide"),
       )
-      if (guideTarget && current.toolMode !== "none") return
+      if (guideTarget && current.toolMode !== "none" && event.shiftKey) return
 
       const point = { x: event.clientX, y: event.clientY }
       const guide = current.guides.find((candidate) => {
@@ -126,7 +135,9 @@ export const useGuideWindowEvents = ({
       })
       if (!guide) return
 
-      if (event.button === 0 && !event.shiftKey && current.toolMode === "none") {
+      if (event.button === 0 && !event.shiftKey) {
+        event.preventDefault()
+        event.stopPropagation()
         guideDragRef.current = {
           id: guide.id,
           orientation: guide.orientation,
@@ -149,8 +160,16 @@ export const useGuideWindowEvents = ({
       const drag = guideDragRef.current
       if (!drag || drag.pointerId !== event.pointerId) return
       if (!optionsRef.current.enabled) return
-      const position =
-        drag.orientation === "vertical" ? event.clientX : event.clientY
+      const current = optionsRef.current
+      const position = getSnapGuidePosition({
+        orientation: drag.orientation,
+        point: { x: event.clientX, y: event.clientY },
+        snapGuidesEnabled: current.snapGuidesEnabled,
+        overlayNode: current.overlayRef.current,
+        guides: current.guides,
+        draggingGuideId: drag.id,
+        document: ownerDocument,
+      })
       if (!drag.committed) {
         event.preventDefault()
         if (guideUserSelectRef.current === null) {

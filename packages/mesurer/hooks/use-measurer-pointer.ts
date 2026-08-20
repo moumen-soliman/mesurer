@@ -275,6 +275,33 @@ export const useMeasurerPointer = ({
       if (toolbarNode && toolbarNode.contains(event.target as Node)) return
       if (settingsOpen) return
       if (!enabled) return
+      const point = { x: event.clientX, y: event.clientY }
+      if (event.altKey !== altPressed) {
+        setAltPressed(event.altKey)
+      }
+
+      if (draggingGuideId) {
+        setGuides((prev) =>
+          prev.map((guide) =>
+            guide.id === draggingGuideId
+              ? {
+                  ...guide,
+                  position: getSnapGuidePosition({
+                    orientation: guide.orientation,
+                    point,
+                    snapGuidesEnabled,
+                    overlayNode: overlayRef.current,
+                    guides,
+                    draggingGuideId,
+                    document,
+                  }),
+                }
+              : guide
+          )
+        )
+        return
+      }
+
       if (toolMode === "none") {
         if (hoverHighlightEnabled) {
           setHoverRect(null)
@@ -283,11 +310,6 @@ export const useMeasurerPointer = ({
         setHoverPointer(null)
         setGuidePreview(null)
         return
-      }
-
-      const point = { x: event.clientX, y: event.clientY }
-      if (event.altKey !== altPressed) {
-        setAltPressed(event.altKey)
       }
 
       hoverPointRef.current = point
@@ -317,8 +339,8 @@ export const useMeasurerPointer = ({
               snapGuidesEnabled,
               overlayNode: overlayRef.current,
               guides,
-          draggingGuideId,
-          document,
+              draggingGuideId,
+              document,
             })
             setGuidePreview({
               orientation: guideOrientation,
@@ -329,27 +351,6 @@ export const useMeasurerPointer = ({
           }
           hoverFrameRef.current = null
         })
-      }
-
-      if (draggingGuideId) {
-        setGuides((prev) =>
-          prev.map((guide) =>
-            guide.id === draggingGuideId
-              ? {
-                  ...guide,
-                  position: getSnapGuidePosition({
-                    orientation: guide.orientation,
-                    point,
-                    snapGuidesEnabled,
-                    overlayNode: overlayRef.current,
-                    guides,
-                    draggingGuideId,
-                    document,
-                  }),
-                }
-              : guide
-          )
-        )
       }
 
       if (guidesEnabled) return
