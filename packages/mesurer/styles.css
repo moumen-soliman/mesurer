@@ -106,16 +106,11 @@
   border-radius: 4px;
   background: #000;
   transform: translateX(-50%);
-  opacity: 0;
   box-shadow:
     0 0 0.5px rgba(0, 0, 0, 0.18),
     0 3px 8px rgba(0, 0, 0, 0.1),
     0 1px 3px rgba(0, 0, 0, 0.1);
-  transition: opacity 160ms;
-}
-
-.mesurer-screenshot-preview[data-visible="true"] {
-  opacity: 1;
+  animation: mesurer-screenshot-preview 5.16s ease-out both;
 }
 
 .mesurer-screenshot-preview[data-side="bottom"] {
@@ -141,7 +136,25 @@
 
 @media (prefers-reduced-motion: reduce) {
   .mesurer-screenshot-preview {
-    transition: none;
+    animation: mesurer-screenshot-preview-reduced 5s linear both;
+  }
+}
+
+@keyframes mesurer-screenshot-preview {
+  0%, 3.1% {
+    opacity: 0;
+  }
+  6.2%, 96.9% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes mesurer-screenshot-preview-reduced {
+  0%, 100% {
+    opacity: 1;
   }
 }
 

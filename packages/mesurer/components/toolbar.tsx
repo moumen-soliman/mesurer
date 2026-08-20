@@ -591,7 +591,6 @@ function ToolbarComponent(
       {screenshotPreviewUrl ? (
         <ScreenshotPreview
           url={screenshotPreviewUrl}
-          ownerWindow={eventTarget}
           side={tooltipSide}
           label={
             screenshotCopy && !screenshotDownload
