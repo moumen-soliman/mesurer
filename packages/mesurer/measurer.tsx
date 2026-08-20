@@ -162,6 +162,7 @@ function MeasurerClient({
   const persistedSettings = sanitizeStoredSettings(ownerWindow, storedState?.settings ?? {});
 
   const enabledRef = useRef(false);
+  const closeScreenshotRef = useRef<() => void>(() => {});
   const toolModeRef = useRef<ToolMode>(
     persistedState?.toolMode === "rulers" ? "none" : persistedState?.toolMode ?? "none",
   );
@@ -413,6 +414,7 @@ function MeasurerClient({
     heldDistancesRef.current = [];
     guidesRef.current = [];
     selectedGuideIdsRef.current = [];
+    closeScreenshotRef.current();
     setEnabled(false);
     setToolMode("none");
     setRulersVisible(false);
@@ -443,6 +445,7 @@ function MeasurerClient({
     heldDistancesRef.current = workspace.heldDistances;
     guidesRef.current = workspace.guides;
     selectedGuideIdsRef.current = workspace.selectedGuideIds;
+    if (!workspace.enabled) closeScreenshotRef.current();
     setEnabled(workspace.enabled);
     setToolMode(workspace.toolMode);
     setRulersVisible(workspace.rulersVisible);
@@ -502,7 +505,11 @@ function MeasurerClient({
   });
 
   const setEnabledPersisted = useCallback(
-    createPersistedSetter(enabledRef, setEnabled, persistState),
+    (value: Parameters<typeof setEnabled>[0]) => {
+      const next = typeof value === "function" ? value(enabledRef.current) : value;
+      if (!next) closeScreenshotRef.current();
+      return createPersistedSetter(enabledRef, setEnabled, persistState)(next);
+    },
     [persistState, setEnabled],
   );
 
@@ -684,7 +691,6 @@ function MeasurerClient({
     ownerWindow,
     toolbarRef,
     overlayRef,
-    enabled,
     captureVisibleTab,
     settings: settingsScreenshot,
     setEnabled: (value) => setEnabledWithHistory(value),
@@ -694,6 +700,7 @@ function MeasurerClient({
       setSettingsOpen(false);
     },
   });
+  closeScreenshotRef.current = screenshot.closeUi;
 
   const openColorPicker = useCallback(() => {
     screenshot.closeUi();
@@ -1043,6 +1050,7 @@ function MeasurerClient({
         onPointerDown={screenshot.handlePointerDown}
         onPointerMove={screenshot.handlePointerMove}
         onPointerUp={screenshot.handlePointerUp}
+        onPointerCancel={screenshot.handlePointerCancel}
       />
 
       <Toolbar

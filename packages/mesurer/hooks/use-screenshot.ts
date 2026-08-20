@@ -21,6 +21,7 @@ import {
 import {
   captureVisibleTabPng,
   prepareScreenshotCapture,
+  releaseScreenshotCapture,
 } from "../core/screenshot-capture"
 
 const SCREENSHOT_ERROR_MS = 2500
@@ -30,7 +31,6 @@ type UseScreenshotOptions = {
   ownerWindow: Window
   toolbarRef: RefObject<HTMLDivElement | null>
   overlayRef: RefObject<HTMLDivElement | null>
-  enabled: boolean
   captureVisibleTab?: () => Promise<Blob>
   settings: ScreenshotSettings
   setEnabled: (enabled: boolean) => void
@@ -43,7 +43,6 @@ export const useScreenshot = ({
   ownerWindow,
   toolbarRef,
   overlayRef,
-  enabled,
   captureVisibleTab,
   settings,
   setEnabled,
@@ -56,7 +55,6 @@ export const useScreenshot = ({
   const preparingScreenshotRef = useRef(false)
   const screenshotPreviewUrlRef = useRef<string | null>(null)
   const screenshotErrorTimeoutRef = useRef<number | null>(null)
-  const enabledRef = useRef(enabled)
 
   const [error, setError] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -92,12 +90,8 @@ export const useScreenshot = ({
   const closeUi = useCallback(() => {
     cancelSelection()
     dismissPreview()
-  }, [cancelSelection, dismissPreview])
-
-  if (enabledRef.current && !enabled) {
-    closeUi()
-  }
-  enabledRef.current = enabled
+    releaseScreenshotCapture(ownerWindow)
+  }, [cancelSelection, dismissPreview, ownerWindow])
 
   useEffect(() => {
     return () => {
@@ -106,6 +100,7 @@ export const useScreenshot = ({
       }
       const url = screenshotPreviewUrlRef.current
       if (url) URL.revokeObjectURL(url)
+      releaseScreenshotCapture(ownerWindow)
     }
   }, [ownerWindow])
 
@@ -140,6 +135,7 @@ export const useScreenshot = ({
           )
         } finally {
           restore()
+          releaseScreenshotCapture(ownerWindow)
         }
       })()
       void croppedPromise.catch(() => undefined)
@@ -307,6 +303,16 @@ export const useScreenshot = ({
     [captureRegion, ownerWindow],
   )
 
+  const handlePointerCancel = useCallback(
+    (event: ReactPointerEvent<HTMLDivElement>) => {
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId)
+      }
+      cancelSelection()
+    },
+    [cancelSelection],
+  )
+
   return {
     overlayRef: screenshotOverlayRef,
     error,
@@ -320,5 +326,6 @@ export const useScreenshot = ({
     handlePointerDown,
     handlePointerMove,
     handlePointerUp,
+    handlePointerCancel,
   }
 }

@@ -9,13 +9,14 @@ type ScreenshotSelectOverlayProps = {
   onPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => void;
   onPointerMove: (event: ReactPointerEvent<HTMLDivElement>) => void;
   onPointerUp: (event: ReactPointerEvent<HTMLDivElement>) => void;
+  onPointerCancel: (event: ReactPointerEvent<HTMLDivElement>) => void;
 };
 
 export const ScreenshotSelectOverlay = forwardRef<
   HTMLDivElement,
   ScreenshotSelectOverlayProps
 >(function ScreenshotSelectOverlay(
-  { active, rect, onPointerDown, onPointerMove, onPointerUp },
+  { active, rect, onPointerDown, onPointerMove, onPointerUp, onPointerCancel },
   ref,
 ) {
   if (!active) return null;
@@ -31,7 +32,7 @@ export const ScreenshotSelectOverlay = forwardRef<
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
-      onPointerCancel={onPointerUp}
+      onPointerCancel={onPointerCancel}
     >
       {hasRect && rect ? (
         <>

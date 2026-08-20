@@ -12,6 +12,7 @@ type CaptureResponse =
 
 window.addEventListener("message", (event) => {
   if (event.source !== window) return;
+  if (event.origin !== window.location.origin) return;
   const data = event.data as {
     type?: string;
     id?: string;

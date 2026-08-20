@@ -68,6 +68,16 @@ const getLiveTabCapture = (ownerWindow: Window) => {
   return current;
 };
 
+export const releaseScreenshotCapture = (ownerWindow: Window) => {
+  const current = tabCaptures.get(ownerWindow);
+  if (!current) return;
+
+  tabCaptures.delete(ownerWindow);
+  current.video.pause();
+  current.video.srcObject = null;
+  current.stream.getTracks().forEach((track) => track.stop());
+};
+
 const startTabCapture = async (
   ownerDocument: Document,
   ownerWindow: Window,
@@ -93,31 +103,36 @@ const startTabCapture = async (
     throw new Error("Capture failed");
   }
 
-  const video = ownerDocument.createElement("video");
-  video.autoplay = true;
-  video.muted = true;
-  video.playsInline = true;
-  video.srcObject = stream;
-  await video.play();
+  try {
+    const video = ownerDocument.createElement("video");
+    video.autoplay = true;
+    video.muted = true;
+    video.playsInline = true;
+    video.srcObject = stream;
+    await video.play();
 
-  if (video.videoWidth === 0 || video.videoHeight === 0) {
-    await new Promise<void>((resolve) => {
-      video.onloadedmetadata = () => resolve();
-    });
+    if (video.videoWidth === 0 || video.videoHeight === 0) {
+      await new Promise<void>((resolve) => {
+        video.onloadedmetadata = () => resolve();
+      });
+    }
+
+    const capture: TabCapture = { stream, video };
+    tabCaptures.set(ownerWindow, capture);
+    track.addEventListener(
+      "ended",
+      () => {
+        if (tabCaptures.get(ownerWindow) === capture) {
+          tabCaptures.delete(ownerWindow);
+        }
+      },
+      { once: true },
+    );
+    return capture;
+  } catch (error) {
+    stream.getTracks().forEach((next) => next.stop());
+    throw error;
   }
-
-  const capture: TabCapture = { stream, video };
-  tabCaptures.set(ownerWindow, capture);
-  track.addEventListener(
-    "ended",
-    () => {
-      if (tabCaptures.get(ownerWindow) === capture) {
-        tabCaptures.delete(ownerWindow);
-      }
-    },
-    { once: true },
-  );
-  return capture;
 };
 
 const captureViaDisplayMedia = async (

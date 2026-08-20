@@ -231,7 +231,73 @@ test("C starts screenshot region selection", async ({ page }) => {
   await page.mouse.down();
   await page.mouse.move(280, 220);
   await expect(selection).toContainText("160 × 80");
+  await page.mouse.up();
   await page.keyboard.press("Escape");
+  await expect(selection).toHaveCount(0);
+});
+
+test("cancelling screenshot pointer input does not capture", async ({ page }) => {
+  await page.goto("/e2e/fixtures/guide-overlay.html");
+  await expect(page.getByRole("button", { name: "Screenshot (C)" })).toBeVisible();
+  await page.keyboard.press("c");
+  const selection = page.getByRole("application", { name: "Screenshot selection" });
+  await expect(selection).toBeVisible();
+  await page.mouse.move(120, 140);
+  await page.mouse.down();
+  await page.mouse.move(280, 220);
+  await selection.evaluate((element) => {
+    element.dispatchEvent(
+      new PointerEvent("pointercancel", {
+        bubbles: true,
+        pointerId: 1,
+      }),
+    );
+  });
+  await page.mouse.up();
+  await expect(selection).toHaveCount(0);
+  await expect(page.locator(".mesurer-screenshot-preview")).toHaveCount(0);
+});
+
+test("screenshot selection captures and copies the selected region", async ({ page }) => {
+  await page.addInitScript(() => {
+    const onePixelPng =
+      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
+    Object.defineProperty(window, "chrome", {
+      configurable: true,
+      value: {
+        runtime: {
+          id: "test-extension",
+          lastError: undefined,
+          sendMessage: (_message: unknown, callback: (response: unknown) => void) =>
+            callback({ ok: true, dataUrl: onePixelPng }),
+        },
+      },
+    });
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { write: () => Promise.resolve() },
+    });
+  });
+  await page.goto("/e2e/fixtures/guide-overlay.html");
+  await expect(page.getByRole("button", { name: "Screenshot (C)" })).toBeVisible();
+  await page.keyboard.press("c");
+  const selection = page.getByRole("application", { name: "Screenshot selection" });
+  await expect(selection).toBeVisible();
+  await page.mouse.move(120, 140);
+  await page.mouse.down();
+  await page.mouse.move(280, 220);
+  await page.mouse.up();
+  await expect(page.getByRole("status", { name: "Screenshot copied" })).toBeVisible();
+  await expect(selection).toHaveCount(0);
+});
+
+test("disabling the measurer closes screenshot selection", async ({ page }) => {
+  await page.goto("/e2e/fixtures/guide-overlay.html");
+  await expect(page.getByRole("button", { name: "Screenshot (C)" })).toBeVisible();
+  await page.keyboard.press("c");
+  const selection = page.getByRole("application", { name: "Screenshot selection" });
+  await expect(selection).toBeVisible();
+  await page.keyboard.press("m");
   await expect(selection).toHaveCount(0);
 });
 
