@@ -74,6 +74,7 @@ type ToolbarProps = {
   settings: ToolbarSettings;
 };
 const GUIDE_MENU_WIDTH = 176;
+const SETTINGS_MENU_WIDTH = 266;
 const VIEWPORT_PADDING = 8;
 
 type ToolbarButtonProps = {
@@ -330,6 +331,19 @@ function ToolbarComponent(
   }, [eventTarget, guideMenuOpen, guideOrientation, settingsOpen, updateMenuAlign]);
 
   const toolbarWidth = settingsRef.current?.parentElement?.offsetWidth ?? 0;
+  const settingsMenuWidth = Math.min(
+    SETTINGS_MENU_WIDTH,
+    Math.max(0, eventTarget.innerWidth - VIEWPORT_PADDING * 2),
+  );
+  const settingsAnchorRight =
+    settingsRef.current?.getBoundingClientRect().right ??
+    position.x + toolbarWidth;
+  const settingsMenuLeft = settingsAnchorRight + 4 - settingsMenuWidth;
+  const settingsMenuShift = Math.max(
+    0,
+    VIEWPORT_PADDING - settingsMenuLeft,
+  );
+  const settingsMenuRight = -4 - settingsMenuShift;
   const toastAlignment =
     position.x <= 8
       ? "msr:left-0"
@@ -634,11 +648,12 @@ function ToolbarComponent(
         {settingsOpen ? (
           <div
             className={cn(
-              "mesurer-menu-surface msr:absolute msr:-right-1 msr:z-[70] msr:box-border msr:w-[320px] msr:max-w-[calc(100vw-16px)] msr:overflow-x-hidden msr:rounded-lg msr:border msr:border-ink-200 msr:bg-white msr:p-3",
+              "mesurer-menu-surface msr:absolute msr:z-[70] msr:box-border msr:w-[266px] msr:max-w-[calc(100vw-16px)] msr:overflow-x-hidden msr:rounded-lg msr:border msr:border-ink-200 msr:bg-white msr:px-3 msr:py-3",
               menuSide === "bottom"
                 ? "msr:top-full msr:mt-2"
                 : "msr:bottom-full msr:mb-2",
             )}
+            style={{ right: settingsMenuRight }}
             data-mesurer-inspector-ui="true"
             role="dialog"
             aria-label="Settings"
