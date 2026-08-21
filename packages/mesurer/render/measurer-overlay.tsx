@@ -146,6 +146,7 @@ export const MeasurerOverlay = memo(function MeasurerOverlay({
           guides={guides.items}
           selectedIds={guides.selectedIds}
           hoverId={guides.hover?.id ?? null}
+          draggingId={guides.draggingId}
           style={guides.style}
           pointerEvents={guides.pointerEvents}
           colors={guides.colors}

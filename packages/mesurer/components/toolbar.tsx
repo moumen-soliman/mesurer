@@ -648,7 +648,7 @@ function ToolbarComponent(
         {settingsOpen ? (
           <div
             className={cn(
-              "mesurer-menu-surface msr:absolute msr:z-[70] msr:box-border msr:w-[266px] msr:max-w-[calc(100vw-16px)] msr:overflow-x-hidden msr:rounded-lg msr:border msr:border-ink-200 msr:bg-white msr:px-3 msr:py-3",
+              "mesurer-menu-surface msr:absolute msr:z-[70] msr:h-[500px] msr:max-h-[calc(100dvh-24px)] msr:w-auto msr:max-w-[calc(100vw-16px)] msr:overflow-hidden msr:rounded-lg msr:border msr:border-ink-200 msr:bg-white msr:p-0",
               menuSide === "bottom"
                 ? "msr:top-full msr:mt-2"
                 : "msr:bottom-full msr:mb-2",

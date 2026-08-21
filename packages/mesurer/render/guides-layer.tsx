@@ -14,6 +14,7 @@ type GuidesLayerProps = {
   guides: Guide[]
   selectedIds: string[]
   hoverId: string | null
+  draggingId: string | null
   style: GuideStyle
   pointerEvents: boolean
   colors: GuideColors
@@ -27,6 +28,7 @@ export function GuidesLayer({
   guides,
   selectedIds,
   hoverId,
+  draggingId,
   style,
   pointerEvents,
   colors,
@@ -49,7 +51,7 @@ export function GuidesLayer({
           key={guide.id}
           guide={guide}
           selected={selectedIds.includes(guide.id)}
-          hovered={hoverId === guide.id}
+          hovered={hoverId === guide.id || draggingId === guide.id}
           style={style}
           pointerEvents={pointerEvents}
           colorActive={colors.active}

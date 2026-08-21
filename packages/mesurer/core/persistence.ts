@@ -49,6 +49,7 @@ export const DEFAULT_SCREENSHOT_SETTINGS: ScreenshotSettings = {
 export type MesurerStoredSettings = {
   highlightColor?: string
   guideColor?: string
+  guideHighlightEnabled?: boolean
   hoverHighlightEnabled?: boolean
   colorPickerFormats?: ColorPickerFormat[]
   colorPickerClickFormat?: ColorPickerFormat
@@ -226,6 +227,7 @@ export const normalizeStoredSettings = (value: unknown): MesurerStoredSettings =
   return {
     ...(typeof input.highlightColor === "string" ? { highlightColor: input.highlightColor } : {}),
     ...(typeof input.guideColor === "string" ? { guideColor: input.guideColor } : {}),
+    ...(typeof input.guideHighlightEnabled === "boolean" ? { guideHighlightEnabled: input.guideHighlightEnabled } : {}),
     ...(typeof input.hoverHighlightEnabled === "boolean" ? { hoverHighlightEnabled: input.hoverHighlightEnabled } : {}),
     ...(Array.isArray(input.colorPickerFormats) && input.colorPickerFormats.some(isFormat)
       ? { colorPickerFormats: input.colorPickerFormats.filter(isFormat) }

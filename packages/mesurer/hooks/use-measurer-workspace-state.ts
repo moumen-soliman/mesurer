@@ -1,6 +1,5 @@
 import { useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
-import type { SettingsTab } from "../components/settings-panel";
 import type { DistanceOverlay, Guide, Measurement, Rect, ToolMode } from "../core/types";
 import type { MesurerStoredWorkspace } from "../core/persistence";
 import { useDragState } from "./use-drag-state";
@@ -76,7 +75,6 @@ export const useMeasurerWorkspaceState = ({
   });
   const [toolbarActive, setToolbarActive] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [settingsTab, setSettingsTab] = useState<SettingsTab>("general");
   const [xrayVisible, setXrayVisible] = useState(xrayVisibleRef.current);
   const [guideOrientation, setGuideOrientation] = useState<"vertical" | "horizontal">(
     persistedState?.guideOrientation ?? "vertical",
@@ -106,8 +104,6 @@ export const useMeasurerWorkspaceState = ({
     setToolbarActive,
     settingsOpen,
     setSettingsOpen,
-    settingsTab,
-    setSettingsTab,
     xrayVisible,
     setXrayVisible,
     guideOrientation,

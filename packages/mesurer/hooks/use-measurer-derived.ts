@@ -38,6 +38,7 @@ type UseMeasurerDerivedArgs = {
   } | null
   displayedMeasurements: Array<{ rect: Rect }>
   hoverHighlightEnabled: boolean
+  guideHighlightEnabled: boolean
   highlightColor: string
   guideColor: string
 }
@@ -61,6 +62,7 @@ export const useMeasurerDerived = ({
   guidePreview,
   displayedMeasurements,
   hoverHighlightEnabled,
+  guideHighlightEnabled,
   highlightColor,
   guideColor,
 }: UseMeasurerDerivedArgs) => {
@@ -250,11 +252,11 @@ export const useMeasurerDerived = ({
       outlineColor: `color-mix(in oklch, ${highlightColor} 80%, transparent)`,
       fillColor: `color-mix(in oklch, ${highlightColor} 8%, transparent)`,
       guideColorActive: `color-mix(in oklch, ${guideColor} 100%, transparent)`,
-      guideColorHover: `color-mix(in oklch, ${guideColor} 90%, transparent)`,
+      guideColorHover: `color-mix(in oklch, ${guideColor} ${guideHighlightEnabled ? 90 : 70}%, transparent)`,
       guideColorDefault: `color-mix(in oklch, ${guideColor} 70%, transparent)`,
-      guideColorPreview: `color-mix(in oklch, ${guideColor} 50%, transparent)`,
+      guideColorPreview: `color-mix(in oklch, ${guideColor} ${guideHighlightEnabled ? 50 : 70}%, transparent)`,
     }),
-    [guideColor, highlightColor]
+    [guideColor, guideHighlightEnabled, highlightColor]
   )
 
   const selectedRects = useMemo(

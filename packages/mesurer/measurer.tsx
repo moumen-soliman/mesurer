@@ -8,7 +8,7 @@ import {
 } from "react";
 import { ensureMeasurerStyles } from "./runtime/style-inject";
 import { MESURER_STYLES } from "./styles.generated";
-import { SettingsPanel, type SettingsTab } from "./components/settings-panel";
+import { SettingsPanel } from "./components/settings-panel";
 import { MeasurerPortal } from "./components/measurer-portal";
 import { useColorPicker } from "./hooks/use-color-picker";
 import { useGuideDragHold } from "./hooks/use-guide-drag-hold";
@@ -28,7 +28,6 @@ import { useScreenshot } from "./hooks/use-screenshot";
 import { useSelectionAnimationCleanup } from "./hooks/use-selection-animation-cleanup";
 import { useTextInspector } from "./hooks/use-text-inspector";
 import { useXray } from "./hooks/use-xray";
-import { settingsTabForContext } from "./core/settings-tab";
 import { createPersistedSetter } from "./core/persisted-setter";
 import type { ColorPickerFormat } from "./core/colors";
 import {
@@ -54,6 +53,7 @@ import {
 export type MeasurerProps = {
   highlightColor?: string;
   guideColor?: string;
+  guideHighlightEnabled?: boolean;
   hoverHighlightEnabled?: boolean;
   persistOnReload?: boolean;
   portalTarget?: HTMLElement | ShadowRoot;
@@ -76,6 +76,7 @@ let measurerInstanceCount = 0;
 function MeasurerClient({
   highlightColor,
   guideColor,
+  guideHighlightEnabled,
   hoverHighlightEnabled,
   persistOnReload,
   portalTarget,
@@ -225,8 +226,6 @@ function MeasurerClient({
     setToolbarActive,
     settingsOpen,
     setSettingsOpen,
-    settingsTab,
-    setSettingsTab,
     xrayVisible,
     setXrayVisible,
     guideOrientation,
@@ -238,6 +237,8 @@ function MeasurerClient({
     setHighlightColor: setSettingsHighlightColor,
     guideColor: settingsGuideColor,
     setGuideColor: setSettingsGuideColor,
+    guideHighlightEnabled: settingsGuideHighlightEnabled,
+    setGuideHighlightEnabled: setSettingsGuideHighlightEnabled,
     hoverHighlightEnabled: settingsHoverHighlight,
     setHoverHighlightEnabled: setSettingsHoverHighlight,
     persistOnReload: settingsPersistOnReload,
@@ -261,6 +262,7 @@ function MeasurerClient({
     defaults: {
       highlightColor,
       guideColor,
+      guideHighlightEnabled,
       hoverHighlightEnabled,
       persistOnReload,
       colorPickerFormats,
@@ -618,23 +620,14 @@ function MeasurerClient({
     void colorPicker.open();
   }, [colorPicker.open, screenshot.closeUi]);
 
-  const initialSettingsTab: SettingsTab = settingsTabForContext({
-    screenshotOpen: screenshot.active || Boolean(screenshot.previewUrl),
-    colorPickerActive: colorPicker.active,
-    toolMode,
-    rulersVisible,
-  });
-
   const toggleSettings = useCallback(() => {
-    const tab = initialSettingsTab;
     screenshot.closeUi();
     if (settingsOpen) {
       setSettingsOpen(false);
       return;
     }
-    setSettingsTab(tab);
     setSettingsOpen(true);
-  }, [initialSettingsTab, screenshot.closeUi, settingsOpen]);
+  }, [screenshot.closeUi, settingsOpen]);
 
   useHotkeys({
     eventTarget: ownerWindow,
@@ -775,6 +768,7 @@ function MeasurerClient({
     guidePreview,
     displayedMeasurements,
     hoverHighlightEnabled: settingsHoverHighlight,
+    guideHighlightEnabled: settingsGuideHighlightEnabled,
     highlightColor: settingsHighlightColor,
     guideColor: settingsGuideColor,
   });
@@ -859,7 +853,6 @@ function MeasurerClient({
     snapGuidesEnabled,
     selectNewGuideEnabled,
     settingsOpen,
-    settingsTab,
     guides,
     createActionCommit,
     setGuides: setGuidesPersisted,
@@ -1012,6 +1005,8 @@ function MeasurerClient({
                 setGuideStyle: setSettingsGuideStyle,
                 snapGuidesEnabled,
                 setSnapGuidesEnabled,
+                guideHighlightEnabled: settingsGuideHighlightEnabled,
+                setGuideHighlightEnabled: setSettingsGuideHighlightEnabled,
                 selectNewGuideEnabled,
                 setSelectNewGuideEnabled,
               }}
@@ -1035,8 +1030,6 @@ function MeasurerClient({
                 onResetSettings: resetSettings,
                 onClearWorkspace: clearWorkspace,
               }}
-              activeTab={settingsTab}
-              onTabChange={setSettingsTab}
             />
           ),
         },
@@ -1048,6 +1041,7 @@ function MeasurerClient({
 export default function Measurer({
   highlightColor = "oklch(0.62 0.18 255)",
   guideColor = "oklch(0.63 0.26 29.23)",
+  guideHighlightEnabled = true,
   hoverHighlightEnabled = true,
   persistOnReload = false,
   portalTarget,
@@ -1075,6 +1069,7 @@ export default function Measurer({
     <MeasurerClient
       highlightColor={highlightColor}
       guideColor={guideColor}
+      guideHighlightEnabled={guideHighlightEnabled}
       hoverHighlightEnabled={hoverHighlightEnabled}
       persistOnReload={persistOnReload}
       persistKey={persistKey}

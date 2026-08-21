@@ -18,7 +18,6 @@ type UseRulerGuidesOptions = {
   snapGuidesEnabled: boolean
   selectNewGuideEnabled: boolean
   settingsOpen: boolean
-  settingsTab: string
   guides: Guide[]
   createActionCommit: () => () => void
   setGuides: Dispatch<SetStateAction<Guide[]>>
@@ -39,7 +38,6 @@ export const useRulerGuides = ({
   snapGuidesEnabled,
   selectNewGuideEnabled,
   settingsOpen,
-  settingsTab,
   guides,
   createActionCommit,
   setGuides,
@@ -74,7 +72,8 @@ export const useRulerGuides = ({
       const id = createId()
       const commit = createActionCommit()
       commit()
-      setSelectedGuideIds([])
+      setSelectedGuideIds(selectNewGuideEnabled ? [id] : [])
+      setDraggingGuideId(id)
       setGuides((prev) => [
         ...prev,
         { id, orientation, position: snapGuidePosition(orientation, position) },
@@ -83,8 +82,10 @@ export const useRulerGuides = ({
     },
     [
       createActionCommit,
+      selectNewGuideEnabled,
       setGuides,
       setSelectedGuideIds,
+      setDraggingGuideId,
       snapGuidePosition,
     ],
   )
@@ -110,15 +111,17 @@ export const useRulerGuides = ({
       if (selectNewGuideEnabled) {
         setSelectedGuideIds([id])
       }
+      setDraggingGuideId(null)
     },
-    [selectNewGuideEnabled, setSelectedGuideIds],
+    [selectNewGuideEnabled, setDraggingGuideId, setSelectedGuideIds],
   )
 
   const cancelGuideFromRuler = useCallback(
     (id: string) => {
       setGuides((prev) => prev.filter((guide) => guide.id !== id))
+      setDraggingGuideId(null)
     },
-    [setGuides],
+    [setDraggingGuideId, setGuides],
   )
 
   const handleGuidePointerDown = useCallback(
@@ -165,7 +168,7 @@ export const useRulerGuides = ({
 
   const overlayGuides = useMemo((): Guide[] => {
     if (guides.length > 0) return guides
-    if (!settingsOpen || settingsTab !== "guides") return guides
+    if (!settingsOpen) return guides
     return [
       {
         id: "__mesurer-preview-vertical",
@@ -178,7 +181,7 @@ export const useRulerGuides = ({
         position: ownerWindow.innerHeight / 2,
       },
     ]
-  }, [guides, ownerWindow, settingsOpen, settingsTab])
+  }, [guides, ownerWindow, settingsOpen])
 
   return {
     startGuideFromRuler,

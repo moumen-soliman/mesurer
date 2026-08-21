@@ -1,14 +1,13 @@
 "use client"
 
-import { useState, type Dispatch, type PointerEvent as ReactPointerEvent, type ReactNode, type SetStateAction } from "react"
+import { useEffect, useRef, useState, type Dispatch, type PointerEvent as ReactPointerEvent, type ReactNode, type SetStateAction } from "react"
 import packageManifest from "../package.json"
 import type { ColorPickerFormat } from "../core/colors"
 import { colorToHex, parseCssColor } from "../core/colors"
 import { cn } from "../core/utils"
+import { CheckIcon } from "./icons"
 import { Tooltip, useTooltip } from "./tooltip"
 import type { GuideStyle, RulerSettings, ScreenshotSettings } from "../core/persistence"
-
-export type SettingsTab = "guides" | "select" | "color-picker" | "screenshot" | "rulers" | "general"
 
 type SettingsSelectProps = {
   highlightColor: string
@@ -28,6 +27,8 @@ type SettingsGuidesProps = {
   setGuideStyle: Dispatch<SetStateAction<GuideStyle>>
   snapGuidesEnabled: boolean
   setSnapGuidesEnabled: Dispatch<SetStateAction<boolean>>
+  guideHighlightEnabled: boolean
+  setGuideHighlightEnabled: Dispatch<SetStateAction<boolean>>
   selectNewGuideEnabled: boolean
   setSelectNewGuideEnabled: Dispatch<SetStateAction<boolean>>
 }
@@ -41,8 +42,6 @@ type SettingsColorProps = {
 
 type SettingsPanelProps = {
   ownerWindow: Window
-  activeTab: SettingsTab
-  onTabChange: (tab: SettingsTab) => void
   select: SettingsSelectProps
   guides: SettingsGuidesProps
   color: SettingsColorProps
@@ -92,7 +91,7 @@ function SettingsSwitch({ label, checked, onChange }: {
       type="button"
       role="switch"
       aria-checked={checked}
-      className="msr:col-span-2 msr:grid msr:h-6 msr:w-full msr:appearance-none msr:grid-cols-[78px_150px] msr:items-center msr:gap-3 msr:text-left msr:text-[12px] msr:leading-none msr:text-ink-700"
+      className="msr:col-span-2 msr:grid msr:h-8 msr:w-full msr:appearance-none msr:grid-cols-[78px_150px] msr:items-center msr:gap-0 msr:text-left msr:text-[12px] msr:leading-none msr:text-ink-700"
       onClick={() => onChange(!checked)}
     >
       <span>{label}</span>
@@ -166,7 +165,7 @@ function SliderControl({
   }
 
   return (
-      <div className="msr:col-span-2 msr:grid msr:w-full msr:grid-cols-[78px_150px] msr:items-center msr:gap-3">
+      <div className="msr:col-span-2 msr:grid msr:h-8 msr:w-full msr:grid-cols-[78px_150px] msr:items-center msr:gap-0">
       <span className="msr:text-[11px] msr:font-medium msr:text-ink-700">{label}</span>
       <ControlShell
         left={
@@ -312,7 +311,7 @@ function ColorField({ label, value, fallback, ownerWindow, onChange }: {
       ? value
       : fallback
   return (
-    <div className="msr:col-span-2 msr:grid msr:w-full msr:grid-cols-[78px_150px] msr:items-center msr:gap-3 msr:text-[12px] msr:text-ink-700">
+    <div className="msr:col-span-2 msr:grid msr:h-8 msr:w-full msr:grid-cols-[78px_150px] msr:items-center msr:gap-0 msr:text-[12px] msr:text-ink-700">
       <span>{label}</span>
       <ControlShell
         left={
@@ -387,6 +386,89 @@ function ColorField({ label, value, fallback, ownerWindow, onChange }: {
   )
 }
 
+function SectionDivider() {
+  return (
+    <div
+      aria-hidden="true"
+      className="msr:h-px msr:w-full msr:shrink-0 msr:bg-[#e6e6e6]"
+    />
+  )
+}
+
+function FormatMultiSelect({
+  formats,
+  selectedFormats,
+  onChange,
+}: {
+  formats: ColorPickerFormat[]
+  selectedFormats: ColorPickerFormat[]
+  onChange: (formats: ColorPickerFormat[]) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handlePointerDown = (event: Event) => {
+      if (!containerRef.current?.contains(event.target as Node)) setOpen(false)
+    }
+    document.addEventListener("pointerdown", handlePointerDown)
+    return () => document.removeEventListener("pointerdown", handlePointerDown)
+  }, [])
+
+  const toggleFormat = (format: ColorPickerFormat) => {
+    if (selectedFormats.includes(format)) {
+      if (selectedFormats.length === 1) return
+      onChange(selectedFormats.filter((item) => item !== format))
+      return
+    }
+    onChange([...selectedFormats, format])
+  }
+
+  return (
+    <div ref={containerRef} className="msr:relative msr:w-full">
+      <button
+        type="button"
+        role="combobox"
+        aria-label="Color formats"
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        className="msr:relative msr:h-6 msr:w-full msr:rounded-[5px] msr:border msr:border-ink-200 msr:bg-white msr:px-1.5 msr:pr-6 msr:text-left msr:text-[11px] msr:text-ink-700 msr:outline-none msr:focus-visible:shadow-[inset_0_0_0_1px_#0d99ff]"
+        onClick={() => setOpen((current) => !current)}
+      >
+        {selectedFormats.join(", ")}
+        <span aria-hidden="true" className="msr:pointer-events-none msr:absolute msr:right-2 msr:top-1/2 msr:size-1.5 msr:-translate-y-1/2 msr:rotate-45 msr:border-r msr:border-b msr:border-ink-500" />
+      </button>
+      {open ? (
+        <div
+          role="listbox"
+          aria-label="Color formats"
+          aria-multiselectable="true"
+          className="msr:absolute msr:left-0 msr:right-0 msr:top-full msr:z-10 msr:mt-1 msr:rounded-[5px] msr:border msr:border-ink-200 msr:bg-white msr:p-1 msr:shadow-md"
+        >
+          {formats.map((format) => {
+            const selected = selectedFormats.includes(format)
+            return (
+              <button
+                key={format}
+                type="button"
+                role="option"
+                aria-selected={selected}
+                className={cn(
+                  "msr:flex msr:h-6 msr:w-full msr:items-center msr:justify-between msr:rounded-[3px] msr:px-1.5 msr:text-left msr:text-[11px] msr:text-ink-700 msr:outline-none msr:hover:bg-ink-50",
+                )}
+                onClick={() => toggleFormat(format)}
+              >
+                <span>{format}</span>
+                {selected ? <CheckIcon size={10} aria-hidden="true" className="msr:ml-auto msr:shrink-0 msr:text-ink-700" /> : null}
+              </button>
+            )
+          })}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
 export function SettingsPanel({
   ownerWindow,
   select,
@@ -395,8 +477,6 @@ export function SettingsPanel({
   camera,
   rulers,
   general,
-  activeTab,
-  onTabChange,
 }: SettingsPanelProps) {
   const { persistOnReload, setPersistOnReload, onResetSettings, onClearWorkspace } = general
   const { settings: screenshotSettings, setSettings: setScreenshotSettings } = camera
@@ -418,6 +498,8 @@ export function SettingsPanel({
     setGuideStyle,
     snapGuidesEnabled,
     setSnapGuidesEnabled,
+    guideHighlightEnabled,
+    setGuideHighlightEnabled,
     selectNewGuideEnabled,
     setSelectNewGuideEnabled,
   } = guides
@@ -427,55 +509,17 @@ export function SettingsPanel({
     colorClickFormat,
     setColorClickFormat,
   } = color
-  const toggleFormat = (format: ColorPickerFormat) => {
-    setColorFormats((previous) => {
-      if (previous.includes(format)) {
-        if (previous.length === 1) return previous
-        return previous.filter((item) => item !== format)
-      }
-      return [...previous, format]
-    })
-  }
-
   const patternTooltip = useTooltip()
 
   return (
-    <div className="mesurer-settings-panel msr:flex msr:max-h-[min(70vh,34rem)] msr:min-w-0 msr:flex-col msr:gap-2 msr:overflow-x-hidden msr:overflow-y-auto" onPointerDown={(event) => event.stopPropagation()}>
-      <div className="mesurer-settings-tabs msr:grid msr:grid-cols-[repeat(3,max-content)] msr:justify-center msr:shrink-0 msr:select-none msr:gap-x-3 msr:rounded-[5px] msr:bg-ink-50 msr:p-px" role="tablist" aria-label="Settings sections">
-        {([
-          ["select", "Select"],
-          ["rulers", "Rulers"],
-          ["guides", "Guides"],
-          ["color-picker", "Color"],
-          ["screenshot", "Screenshot"],
-          ["general", "General"],
-        ] as const).map(([value, label]) => (
-          <button
-            key={value}
-            type="button"
-            role="tab"
-            aria-selected={activeTab === value}
-            id={`settings-tab-${value}`}
-            aria-controls={`settings-panel-${value}`}
-            className={cn(
-              "mesurer-settings-tab msr:relative msr:flex msr:h-5 msr:w-auto msr:appearance-none msr:items-center msr:justify-center msr:overflow-hidden msr:whitespace-nowrap msr:px-1.5 msr:py-0 msr:text-[10px] msr:font-medium msr:transition-colors msr:focus-visible:outline-none msr:focus-visible:shadow-[inset_0_0_0_1px_#0d99ff]",
-              activeTab === value
-                ? "msr:rounded-[5px] msr:bg-white msr:text-ink-900 msr:shadow-[0_0_0_1px_rgba(15,23,42,0.12)]"
-                : "msr:rounded-[5px] msr:text-ink-500 msr:hover:text-ink-700",
-            )}
-            onClick={() => onTabChange(value)}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
-      {activeTab === "guides" ? <section className="msr:grid msr:grid-cols-[78px_150px] msr:items-center msr:gap-x-3 msr:gap-y-1" aria-label="Guide settings">
+    <div className="mesurer-settings-panel msr:flex msr:h-full msr:w-full msr:min-w-0 msr:flex-col msr:gap-0 msr:overflow-y-auto" onPointerDown={(event) => event.stopPropagation()}>
+      <section className="msr:grid msr:w-full msr:grid-cols-[78px_150px] msr:items-center msr:gap-0 msr:px-3" aria-label="Guide settings">
+        <h2 className="msr:col-span-2 msr:flex msr:h-8 msr:items-center msr:text-[11px] msr:font-semibold msr:text-ink-500">Guides</h2>
         <ColorField label="Color" value={guideColor} fallback="#f97316" ownerWindow={ownerWindow} onChange={setGuideColor} />
         <SliderControl label="Weight" min={1} inputMin={0.01} max={4} step={1} value={guideStyle.width} formatValue={(value) => `${value}px`} parseInput={(input) => Number.parseFloat(input)} onChange={(value) => setGuideStyle((style) => ({ ...style, width: value }))} />
-        <div className="msr:col-span-2 msr:grid msr:grid-cols-[78px_150px] msr:items-center msr:gap-3">
+      <div className="msr:col-span-2 msr:grid msr:grid-cols-[78px_minmax(0,1fr)] msr:items-center msr:gap-0">
           <span className="msr:text-[12px] msr:text-ink-700">Pattern</span>
-          <div className="msr:flex msr:gap-1" role="radiogroup" aria-label="Guide pattern" onMouseLeave={patternTooltip.onTooltipContainerLeave}>
+          <div className="msr:flex" role="radiogroup" aria-label="Guide pattern" onMouseLeave={patternTooltip.onTooltipContainerLeave}>
             {GUIDE_PATTERNS.map(({ value, label }) => {
               const selected = guideStyle.pattern === value
               const tooltipId = `guide-pattern-${value}`
@@ -509,45 +553,40 @@ export function SettingsPanel({
           </>
         ) : null}
         <div className="msr:col-span-2"><SettingsSwitch label="Snap" checked={snapGuidesEnabled} onChange={setSnapGuidesEnabled} /></div>
-        <div className="msr:col-span-2"><SettingsSwitch label="Highlight" checked={selectNewGuideEnabled} onChange={setSelectNewGuideEnabled} /></div>
-      </section> : null}
+        <div className="msr:col-span-2"><SettingsSwitch label="Highlight" checked={guideHighlightEnabled} onChange={setGuideHighlightEnabled} /></div>
+        <div className="msr:col-span-2"><SettingsSwitch label="Select" checked={selectNewGuideEnabled} onChange={setSelectNewGuideEnabled} /></div>
+      </section>
 
-      {activeTab === "select" ? <section className="msr:grid msr:grid-cols-[78px_150px] msr:items-center msr:gap-x-3 msr:gap-y-1" aria-label="Selection settings">
+      <SectionDivider />
+      <section className="msr:grid msr:w-full msr:grid-cols-[78px_150px] msr:items-center msr:gap-0 msr:px-3" aria-label="Selection settings">
+        <h2 className="msr:col-span-2 msr:flex msr:h-8 msr:items-center msr:text-[11px] msr:font-semibold msr:text-ink-500">Selection</h2>
         <ColorField label="Color" value={highlightColor} fallback="#0d99ff" ownerWindow={ownerWindow} onChange={setHighlightColor} />
         <div className="msr:col-span-2"><SettingsSwitch label="Hover" checked={hoverHighlight} onChange={setHoverHighlight} /></div>
         <div className="msr:col-span-2"><SettingsSwitch label="Element snap" checked={snapEnabled} onChange={setSnapEnabled} /></div>
         <div className="msr:col-span-2"><SettingsSwitch label="Stack" checked={multiMeasureEnabled} onChange={setMultiMeasureEnabled} /></div>
-      </section> : null}
+      </section>
 
-      {activeTab === "color-picker" ? <section className="msr:grid msr:grid-cols-[78px_150px] msr:items-center msr:gap-x-3 msr:gap-y-1" aria-label="Color settings">
-        <div className="msr:col-span-2 msr:grid msr:grid-cols-[78px_150px] msr:items-center msr:gap-3">
-          <span className="msr:text-[12px] msr:text-ink-700">Format</span>
-          <div className="msr:flex msr:min-w-0 msr:gap-1">
-            {COLOR_FORMATS.map((format) => (
-              <button
-                key={format}
-                type="button"
-                aria-pressed={colorFormats.includes(format)}
-                className={cn(
-                  "msr:h-6 msr:min-w-0 msr:flex-1 msr:rounded-[5px] msr:border msr:px-1 msr:text-[11px] msr:focus-visible:outline-none msr:focus-visible:shadow-[inset_0_0_0_1px_#0d99ff]",
-                  colorFormats.includes(format) ? "msr:border-[#0d99ff] msr:bg-[#0d99ff] msr:text-white" : "msr:border-ink-200 msr:text-ink-500 msr:hover:bg-ink-50",
-                )}
-                onClick={() => toggleFormat(format)}
-              >
-                {format}
-              </button>
-            ))}
-          </div>
+      <SectionDivider />
+      <section className="msr:grid msr:w-full msr:grid-cols-[78px_150px] msr:items-center msr:gap-0 msr:px-3" aria-label="Color settings">
+        <h2 className="msr:col-span-2 msr:flex msr:h-8 msr:items-center msr:text-[11px] msr:font-semibold msr:text-ink-500">Color picker</h2>
+        <div className="msr:col-span-2 msr:grid msr:min-h-8 msr:grid-cols-[78px_150px] msr:items-start msr:gap-0">
+          <span className="msr:flex msr:h-8 msr:items-center msr:text-[12px] msr:text-ink-700">Format</span>
+          <FormatMultiSelect formats={COLOR_FORMATS} selectedFormats={colorFormats} onChange={setColorFormats} />
         </div>
-        <label className="msr:col-span-2 msr:flex msr:items-center msr:justify-between msr:gap-3 msr:text-[12px] msr:text-ink-700">
-          Copy
-          <select value={colorClickFormat} className="msr:rounded-[5px] msr:border msr:border-ink-200 msr:bg-white msr:px-1.5 msr:py-1 msr:text-[11px] msr:outline-none msr:focus:shadow-[inset_0_0_0_1px_#0d99ff]" onChange={(event) => setColorClickFormat(event.target.value as ColorPickerFormat)}>
-            {COLOR_FORMATS.map((format) => <option key={format} value={format}>{format}</option>)}
-          </select>
+        <label className="msr:col-span-2 msr:grid msr:h-8 msr:grid-cols-[78px_150px] msr:items-center msr:gap-0 msr:text-[12px] msr:text-ink-700">
+          <span>Copy</span>
+          <span className="msr:relative msr:block msr:w-full">
+            <select value={colorClickFormat} className="msr:h-6 msr:w-full msr:appearance-none msr:rounded-[5px] msr:border msr:border-ink-200 msr:bg-white msr:px-1.5 msr:pr-6 msr:text-[11px] msr:outline-none msr:focus:shadow-[inset_0_0_0_1px_#0d99ff]" onChange={(event) => setColorClickFormat(event.target.value as ColorPickerFormat)}>
+              {COLOR_FORMATS.map((format) => <option key={format} value={format}>{format}</option>)}
+            </select>
+            <span aria-hidden="true" className="msr:pointer-events-none msr:absolute msr:right-2 msr:top-1/2 msr:size-1.5 msr:-translate-y-1/2 msr:rotate-45 msr:border-r msr:border-b msr:border-ink-500" />
+          </span>
         </label>
-      </section> : null}
+      </section>
 
-      {activeTab === "screenshot" ? <section className="msr:grid msr:grid-cols-[78px_150px] msr:items-center msr:gap-x-3 msr:gap-y-1" aria-label="Screenshot settings">
+      <SectionDivider />
+      <section className="msr:grid msr:w-full msr:grid-cols-[78px_150px] msr:items-center msr:gap-0 msr:px-3" aria-label="Screenshot settings">
+        <h2 className="msr:col-span-2 msr:flex msr:h-8 msr:items-center msr:text-[11px] msr:font-semibold msr:text-ink-500">Screenshot</h2>
         <div className="msr:col-span-2">
           <SettingsSwitch
             label="Copy"
@@ -572,24 +611,28 @@ export function SettingsPanel({
             }
           />
         </div>
-      </section> : null}
+      </section>
 
-      {activeTab === "rulers" ? <section className="msr:grid msr:grid-cols-[78px_150px] msr:items-center msr:gap-x-3 msr:gap-y-1" aria-label="Ruler settings">
+      <SectionDivider />
+      <section className="msr:grid msr:w-full msr:grid-cols-[78px_150px] msr:items-center msr:gap-0 msr:px-3" aria-label="Ruler settings">
+        <h2 className="msr:col-span-2 msr:flex msr:h-8 msr:items-center msr:text-[11px] msr:font-semibold msr:text-ink-500">Rulers</h2>
         <SliderControl label="Opacity" min={0.2} max={1} step={0.05} value={rulerSettings.opacity} formatValue={(value) => `${Math.round(value * 100)}%`} parseInput={(input) => Number.parseFloat(input) / 100} onChange={(value) => setRulerSettings((settings) => ({ ...settings, opacity: value }))} />
         <div className="msr:col-span-2"><SettingsSwitch label="Edge reveal" checked={rulerSettings.edgeReveal} onChange={(edgeReveal) => setRulerSettings((settings) => ({ ...settings, edgeReveal }))} /></div>
-      </section> : null}
+      </section>
 
-      {activeTab === "general" ? <section className="msr:grid msr:grid-cols-[78px_150px] msr:items-center msr:gap-x-3 msr:gap-y-1" aria-label="General settings">
+      <SectionDivider />
+      <section className="msr:grid msr:w-full msr:grid-cols-[78px_150px] msr:items-center msr:gap-0 msr:px-3" aria-label="General settings">
+        <h2 className="msr:col-span-2 msr:flex msr:h-8 msr:items-center msr:text-[11px] msr:font-semibold msr:text-ink-500">General</h2>
         <div className="msr:col-span-2"><SettingsSwitch label="Persist" checked={persistOnReload} onChange={setPersistOnReload} /></div>
-        <div className="msr:col-span-2 msr:grid msr:h-6 msr:grid-cols-[78px_150px] msr:items-center msr:gap-3 msr:text-[12px] msr:text-ink-700">
+        <div className="msr:col-span-2 msr:grid msr:h-8 msr:grid-cols-[78px_150px] msr:items-center msr:gap-0 msr:text-[12px] msr:text-ink-700">
           <span>Version</span>
           <span className="msr:justify-self-end msr:font-mono msr:text-[11px] msr:tabular-nums msr:text-ink-700">{packageManifest.version}</span>
         </div>
-        <div className="msr:col-span-2 msr:flex msr:justify-end msr:gap-1">
+        <div className="msr:col-span-2 msr:flex msr:h-8 msr:w-full msr:justify-end msr:gap-1">
           <button
             type="button"
             aria-label="Reset settings to defaults"
-            className="msr:rounded-[5px] msr:border msr:border-ink-200 msr:px-2 msr:py-1 msr:text-[11px] msr:text-ink-700 msr:hover:bg-ink-50 msr:focus-visible:outline-none msr:focus-visible:shadow-[inset_0_0_0_1px_#0d99ff]"
+            className="msr:h-6 msr:rounded-[5px] msr:border msr:border-ink-200 msr:px-2 msr:text-[11px] msr:text-ink-700 msr:hover:bg-ink-50 msr:focus-visible:outline-none msr:focus-visible:shadow-[inset_0_0_0_1px_#0d99ff]"
             onClick={onResetSettings}
           >
             Use defaults
@@ -597,13 +640,13 @@ export function SettingsPanel({
           <button
             type="button"
             aria-label="Clear workspace"
-            className="msr:rounded-[5px] msr:border msr:border-red-200 msr:px-2 msr:py-1 msr:text-[11px] msr:text-red-600 msr:hover:bg-red-50 msr:focus-visible:outline-none msr:focus-visible:shadow-[inset_0_0_0_1px_#ef4444]"
+            className="msr:h-6 msr:rounded-[5px] msr:border msr:border-red-200 msr:px-2 msr:text-[11px] msr:text-red-600 msr:hover:bg-red-50 msr:focus-visible:outline-none msr:focus-visible:shadow-[inset_0_0_0_1px_#ef4444]"
             onClick={onClearWorkspace}
           >
             Clear workspace
           </button>
         </div>
-      </section> : null}
+      </section>
     </div>
   )
 }

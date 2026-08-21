@@ -195,8 +195,7 @@ test("falls back to the default swatch for an invalid persisted color", async ({
 
   const dialog = page.getByRole("dialog", { name: "Settings" });
   await expect(dialog).toBeVisible();
-  await dialog.getByRole("tab", { name: "Select" }).click();
-  const swatch = dialog.locator("input[aria-label='Color color picker']").locator("..");
+  const swatch = dialog.locator("[aria-label='Selection settings'] input[aria-label='Color color picker']").locator("..");
   await expect(swatch).toHaveCSS(
     "background-color",
     "oklch(0.62 0.18 255)",
@@ -311,7 +310,6 @@ test("screenshot settings support download-only capture", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Screenshot (C)" })).toBeVisible();
   await page.getByRole("button", { name: "Settings" }).click();
   const dialog = page.getByRole("dialog", { name: "Settings" });
-  await dialog.getByRole("tab", { name: "Screenshot" }).click();
   await dialog.getByRole("switch", { name: "Copy" }).click();
   await expect(dialog.getByRole("switch", { name: "Copy" })).toHaveAttribute(
     "aria-checked",
@@ -353,30 +351,27 @@ test("settings button opens and dismisses its popover", async ({ page }) => {
   await expect(page.getByRole("dialog", { name: "Settings" })).toHaveCount(0);
 });
 
-test("settings opens on the active feature tab", async ({ page }) => {
+test("settings opens with all sections visible", async ({ page }) => {
   await page.goto("/e2e/fixtures/guide-overlay.html");
   const settings = page.getByRole("button", { name: "Settings (⌘/Ctrl+,)" });
 
   await settings.click();
-  await expect(page.getByRole("tab", { name: "General" })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("heading", { name: "General" })).toBeVisible();
   await page.keyboard.press("Escape");
 
   await page.getByRole("button", { name: "Guides (G)" }).click();
   await settings.click();
-  await expect(page.getByRole("tab", { name: "Guides" })).toHaveAttribute("aria-selected", "true");
-  await page.getByRole("tab", { name: "Select" }).click();
-  await expect(page.locator("[data-mesurer-guide]")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Guides" })).toBeVisible();
   await page.keyboard.press("Escape");
 
   await page.getByRole("button", { name: "Select (S)" }).click();
   await settings.click();
-  await expect(page.getByRole("tab", { name: "Select" })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("heading", { name: "Selection" })).toBeVisible();
 });
 
 test("guide sliders do not drag the toolbar", async ({ page }) => {
   await page.goto("/e2e/fixtures/guide-overlay.html");
   await page.getByRole("button", { name: "Settings" }).click();
-  await page.getByRole("tab", { name: "Guides" }).click();
 
   const toolbar = page.locator(".mesurer-toolbar-surface");
   const slider = page.getByRole("slider", { name: "Weight" });
@@ -411,7 +406,6 @@ test("guide sliders do not drag the toolbar", async ({ page }) => {
 test("guide pattern renders as a real dashed line", async ({ page }) => {
   await page.goto("/e2e/fixtures/guide-overlay.html");
   await page.getByRole("button", { name: "Settings" }).click();
-  await page.getByRole("tab", { name: "Guides" }).click();
   await page.getByRole("radio", { name: "Dashed guide pattern" }).click();
   await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "Guides (G)" }).click();
@@ -434,10 +428,6 @@ test("placed guides stay visible and update while settings is open", async ({
   await expect(line).toHaveCount(1);
 
   await page.getByRole("button", { name: "Settings" }).click();
-  await expect(page.getByRole("tab", { name: "Guides" })).toHaveAttribute(
-    "aria-selected",
-    "true",
-  );
   await expect(line).toHaveCount(1);
   await expect(page.locator("[data-mesurer-guide]")).toBeVisible();
 
@@ -450,7 +440,6 @@ test("guide settings show a live preview when no guides are placed", async ({
 }) => {
   await page.goto("/e2e/fixtures/guide-overlay.html");
   await page.getByRole("button", { name: "Settings" }).click();
-  await page.getByRole("tab", { name: "Guides" }).click();
 
   const guides = page.locator("[data-mesurer-guide]");
   await expect(guides).toHaveCount(2);
@@ -461,8 +450,7 @@ test("guide settings show a live preview when no guides are placed", async ({
     /repeating-linear-gradient/,
   );
 
-  await page.getByRole("tab", { name: "Select" }).click();
-  await expect(guides).toHaveCount(0);
+  await expect(guides).toHaveCount(2);
 });
 
 test("selection stays visible while settings is open", async ({ page }) => {
@@ -475,10 +463,6 @@ test("selection stays visible while settings is open", async ({ page }) => {
   await expect(page.locator("[data-mesurer-selected-measurement]")).toHaveCount(1);
 
   await page.getByRole("button", { name: "Settings" }).click();
-  await expect(page.getByRole("tab", { name: "Select" })).toHaveAttribute(
-    "aria-selected",
-    "true",
-  );
   await expect(page.locator("[data-mesurer-selected-measurement]")).toHaveCount(1);
   await page.getByRole("switch", { name: "Hover" }).click();
   await expect(page.locator("[data-mesurer-selected-measurement]")).toHaveCount(1);
@@ -490,10 +474,6 @@ test("rulers stay visible while settings is open", async ({ page }) => {
   await expect(page.locator("[data-mesurer-rulers]")).toBeVisible();
 
   await page.getByRole("button", { name: "Settings" }).click();
-  await expect(page.getByRole("tab", { name: "Rulers" })).toHaveAttribute(
-    "aria-selected",
-    "true",
-  );
   await expect(page.locator("[data-mesurer-rulers]")).toBeVisible();
   await expect(page.locator("[data-mesurer-rulers]")).toHaveCSS("opacity", "1");
 });
@@ -537,14 +517,12 @@ test("Cmd/Ctrl comma opens settings", async ({ page }) => {
 test("settings preferences survive a reload", async ({ page }) => {
   await page.goto("/e2e/fixtures/guide-overlay.html");
   await page.getByRole("button", { name: "Settings" }).click();
-  await page.getByRole("tab", { name: "Select" }).click();
   const hoverSwitch = page.getByRole("switch", { name: "Hover" });
   await hoverSwitch.click();
   await expect(hoverSwitch).toHaveAttribute("aria-checked", "false");
 
   await page.reload();
   await page.getByRole("button", { name: "Settings" }).click();
-  await page.getByRole("tab", { name: "Select" }).click();
   await expect(page.getByRole("switch", { name: "Hover" })).toHaveAttribute(
     "aria-checked",
     "false",
@@ -554,7 +532,6 @@ test("settings preferences survive a reload", async ({ page }) => {
 test("persist on reload keeps the workspace", async ({ page }) => {
   await page.goto("/e2e/fixtures/guide-overlay.html");
   await page.getByRole("button", { name: "Settings (⌘/Ctrl+,)" }).click();
-  await page.getByRole("tab", { name: "General" }).click();
   await page.getByRole("switch", { name: "Persist" }).click();
   await page.keyboard.press("Escape");
 
@@ -569,7 +546,6 @@ test("persist on reload keeps the workspace", async ({ page }) => {
 test("near-edge rulers reveal when the pointer approaches the edge", async ({ page }) => {
   await page.goto("/e2e/fixtures/guide-overlay.html");
   await page.getByRole("button", { name: "Settings (⌘/Ctrl+,)" }).click();
-  await page.getByRole("tab", { name: "Rulers" }).click();
   await page.getByRole("switch", { name: "Edge reveal" }).click();
   await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "Rulers (R)" }).click();
@@ -626,11 +602,9 @@ test("syncs settings between tabs", async ({ page }) => {
   await secondPage.goto("/e2e/fixtures/guide-overlay.html");
 
   await page.getByRole("button", { name: "Settings" }).click();
-  await page.getByRole("tab", { name: "Select" }).click();
   await page.getByRole("switch", { name: "Hover" }).click();
 
   await secondPage.getByRole("button", { name: "Settings" }).click();
-  await secondPage.getByRole("tab", { name: "Select" }).click();
   await expect(secondPage.getByRole("switch", { name: "Hover" })).toHaveAttribute(
     "aria-checked",
     "false",
