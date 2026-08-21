@@ -14,7 +14,11 @@ export default defineConfig({
   splitting: false,
   sourcemap: false,
   clean: true,
-  minify: false,
+  minify: true,
+  define: {
+    "process.env.NODE_ENV": JSON.stringify("production"),
+  },
+  legalComments: "none",
   outExtension: () => ({
     js: ".js",
   }),

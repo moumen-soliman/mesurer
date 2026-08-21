@@ -40,7 +40,7 @@
     "url": "https://github.com/ibelick/mesurer/issues"
   },
   "scripts": {
-    "build": "pnpm exec tailwindcss -i styles.css -o styles.generated.css && node scripts/generate-styles.mjs && tsup && pnpm exec tailwindcss -i styles.css -o dist/styles.css",
+    "build": "pnpm exec tailwindcss -i styles.css -o styles.generated.css -m && node scripts/generate-styles.mjs && tsup && pnpm exec tailwindcss -i styles.css -o dist/styles.css -m",
     "dev": "node scripts/dev.mjs",
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "npm run typecheck && npm run build"
