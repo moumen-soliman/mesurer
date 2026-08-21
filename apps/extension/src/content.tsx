@@ -1,5 +1,5 @@
 import { createRoot, type Root } from "react-dom/client";
-import { Measurer } from "mesurer";
+import { Mesurer } from "mesurer";
 import { destroyHost, getOrCreateContainer } from "./host";
 import { createExtensionPersistence } from "./storage";
 import { captureVisibleTabPng } from "./capture-visible-tab";
@@ -60,7 +60,7 @@ const mount = async () => {
     }
     state.root = createRoot(container);
     state.root.render(
-      <Measurer
+      <Mesurer
         portalTarget={shadowRoot}
         persistence={persistence}
         persistOnReload={new URLSearchParams(location.search).has("persist")}

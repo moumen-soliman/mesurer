@@ -1,4 +1,4 @@
-import { Measurer } from "mesurer";
+import { Mesurer } from "mesurer";
 import {
   ArrowsCounterClockwiseIcon,
   CalculatorIcon,
@@ -228,14 +228,14 @@ function HomeContent() {
         <p>
           Then add the component preference at the root of your application:
         </p>
-        <CodeBlock as="pre">{`import { Measurer } from "mesurer";
+        <CodeBlock as="pre">{`import { Mesurer } from "mesurer";
 
 export default function RootLayout({ children }) {
   return (
     <html>
       <head>
         {process.env.NODE_ENV === "development" && (
-          <Measurer />
+          <Mesurer />
         )}
       </head>
       <body>{children}</body>
@@ -356,7 +356,7 @@ export default function RootLayout({ children }) {
               <code className="code">M</code>
             </div>
             <div className="max-w-[60%] text-right text-balance text-muted">
-              Toggle measurer on/off
+              Toggle Mesurer on/off
             </div>
           </div>
           <div className="flex items-start justify-between gap-8 border-b border-border px-2 py-2">
@@ -489,7 +489,7 @@ function PrivacyContent() {
 export function App() {
   return (
     <main className="min-h-screen px-5 py-20">
-      <Measurer />
+      <Mesurer />
       <div className="mx-auto flex max-w-2xl flex-col gap-14">
         <Header showDescription={!isDocsPage} linkToHome={isDocsPage} />
         {isChangelogPage ? (

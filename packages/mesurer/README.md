@@ -21,13 +21,13 @@ npm install mesurer
 ## Usage
 
 ```tsx
-import { Measurer } from "mesurer";
+import { Mesurer } from "mesurer";
 
 function App() {
   return (
     <>
       <YourApp />
-      <Measurer />
+      <Mesurer />
     </>
   );
 }
@@ -61,7 +61,7 @@ Props are the defaults. Saved settings override them; **Use defaults** restores 
 
 | Shortcut               | Action                                                |
 | ---------------------- | ----------------------------------------------------- |
-| `M`                    | Toggle measurer on/off.                               |
+| `M`                    | Toggle Mesurer on/off.                                |
 | `S`                    | Toggle Select mode.                                   |
 | `A`                    | Toggle Text Inspector mode.                           |
 | `P`                    | Open the native Color picker.                         |

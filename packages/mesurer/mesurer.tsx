@@ -6,21 +6,21 @@ import {
   useRef,
   useState,
 } from "react";
-import { ensureMeasurerStyles } from "./runtime/style-inject";
+import { ensureMesurerStyles } from "./runtime/style-inject";
 import { MESURER_STYLES } from "./styles.generated";
 import { SettingsPanel } from "./components/settings-panel";
-import { MeasurerPortal } from "./components/measurer-portal";
+import { MesurerPortal } from "./components/mesurer-portal";
 import { useColorPicker } from "./hooks/use-color-picker";
 import { useGuideDragHold } from "./hooks/use-guide-drag-hold";
 import { useGuideWindowEvents } from "./hooks/use-guide-window-events";
 import { useHotkeys } from "./hooks/use-hotkeys";
 import { useHydrated } from "./hooks/use-hydrated";
 import { useLiveElementTracking } from "./hooks/use-live-element-tracking";
-import { useMeasurerDerived } from "./hooks/use-measurer-derived";
-import { useMeasurerHistory } from "./hooks/use-measurer-history";
-import { useMeasurerSettings } from "./hooks/use-measurer-settings";
-import { useMeasurerWorkspaceState } from "./hooks/use-measurer-workspace-state";
-import { useMeasurerPointer } from "./hooks/use-measurer-pointer";
+import { useMesurerDerived } from "./hooks/use-mesurer-derived";
+import { useMesurerHistory } from "./hooks/use-mesurer-history";
+import { useMesurerSettings } from "./hooks/use-mesurer-settings";
+import { useMesurerWorkspaceState } from "./hooks/use-mesurer-workspace-state";
+import { useMesurerPointer } from "./hooks/use-mesurer-pointer";
 import { usePersistenceLifecycle } from "./hooks/use-persistence-lifecycle";
 import { useResizeSync } from "./hooks/use-resize-sync";
 import { useRulerGuides } from "./hooks/use-ruler-guides";
@@ -50,7 +50,7 @@ import {
   stripMeasurement,
 } from "./core/workspace";
 
-export type MeasurerProps = {
+export type MesurerProps = {
   highlightColor?: string;
   guideColor?: string;
   guideHighlightEnabled?: boolean;
@@ -71,9 +71,9 @@ export type MeasurerProps = {
   captureVisibleTab?: () => Promise<Blob>;
 };
 
-let measurerInstanceCount = 0;
+let mesurerInstanceCount = 0;
 
-function MeasurerClient({
+function MesurerClient({
   highlightColor,
   guideColor,
   guideHighlightEnabled,
@@ -94,7 +94,7 @@ function MeasurerClient({
   captureVisibleTab,
 }: Required<
   Omit<
-    MeasurerProps,
+    MesurerProps,
     | "persistKey"
     | "persistence"
     | "onPersistenceError"
@@ -104,7 +104,7 @@ function MeasurerClient({
   >
 > &
   Pick<
-    MeasurerProps,
+    MesurerProps,
     "persistKey" | "persistence" | "onPersistenceError" | "captureVisibleTab"
   > & {
     guideStyle: GuideStyle;
@@ -112,7 +112,7 @@ function MeasurerClient({
   }) {
   const instanceIdRef = useRef<number | null>(null);
   if (instanceIdRef.current === null) {
-    instanceIdRef.current = ++measurerInstanceCount;
+    instanceIdRef.current = ++mesurerInstanceCount;
   }
   const ownerDocument = portalTarget.ownerDocument ?? document;
   const ownerWindow = ownerDocument.defaultView ?? window;
@@ -146,7 +146,7 @@ function MeasurerClient({
   const closeScreenshotRef = useRef<() => void>(() => {});
   const workspacePersistTimeoutRef = useRef<number | null>(null);
   const applyingExternalPersistenceRef = useRef(false);
-  const workspace = useMeasurerWorkspaceState({
+  const workspace = useMesurerWorkspaceState({
     persistedState,
     snapEnabledDefault: persistedSettings.snapEnabled ?? snapEnabledDefault,
     snapGuidesEnabledDefault:
@@ -256,7 +256,7 @@ function MeasurerClient({
     resetSettings,
     persistSettings,
     applyPersistedSettings,
-  } = useMeasurerSettings({
+  } = useMesurerSettings({
     activePersistence,
     persistedSettings,
     defaults: {
@@ -486,7 +486,7 @@ function MeasurerClient({
     setEnabledWithHistory,
     undo: undoHistory,
     redo: redoHistory,
-  } = useMeasurerHistory({
+  } = useMesurerHistory({
     toggles: {
       enabled,
       setEnabled: setEnabledPersisted,
@@ -750,7 +750,7 @@ function MeasurerClient({
     selectedEdgeVisibility,
     hoverEdgeVisibility,
     measurementEdgeVisibility,
-  } = useMeasurerDerived({
+  } = useMesurerDerived({
     document: ownerDocument,
     window: ownerWindow,
     start,
@@ -779,7 +779,7 @@ function MeasurerClient({
     handlePointerMove,
     handlePointerUp,
     handlePointerLeave,
-  } = useMeasurerPointer({
+  } = useMesurerPointer({
     document: ownerDocument,
     window: ownerWindow,
     toolbarRef,
@@ -866,7 +866,7 @@ function MeasurerClient({
   const overlayInteractive = enabled && !settingsOpen;
 
   return (
-    <MeasurerPortal
+    <MesurerPortal
       portalTarget={portalTarget}
       rootRef={overlayRef}
       toolbarRef={toolbarRef}
@@ -1040,7 +1040,7 @@ function MeasurerClient({
   );
 }
 
-export default function Measurer({
+export default function Mesurer({
   highlightColor = "oklch(0.62 0.18 255)",
   guideColor = "oklch(0.63 0.26 29.23)",
   guideHighlightEnabled = true,
@@ -1059,16 +1059,16 @@ export default function Measurer({
   persistence,
   onPersistenceError,
   captureVisibleTab,
-}: MeasurerProps) {
+}: MesurerProps) {
   if (typeof document !== "undefined") {
-    ensureMeasurerStyles(MESURER_STYLES, portalTarget);
+    ensureMesurerStyles(MESURER_STYLES, portalTarget);
   }
 
   const hydrated = useHydrated();
   if (!hydrated) return null;
 
   return (
-    <MeasurerClient
+    <MesurerClient
       highlightColor={highlightColor}
       guideColor={guideColor}
       guideHighlightEnabled={guideHighlightEnabled}

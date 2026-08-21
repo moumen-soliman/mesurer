@@ -12,7 +12,7 @@ import { getPrimarySelectedMeasurement } from "../core/selection-helpers"
 import type { InspectMeasurement, Point, Rect } from "../core/types"
 import { formatValue } from "../core/utils"
 
-type UseMeasurerDerivedArgs = {
+type UseMesurerDerivedArgs = {
   document: Document
   window: Window
   start: Point | null
@@ -43,7 +43,7 @@ type UseMeasurerDerivedArgs = {
   guideColor: string
 }
 
-export const useMeasurerDerived = ({
+export const useMesurerDerived = ({
   document,
   window,
   start,
@@ -65,7 +65,7 @@ export const useMeasurerDerived = ({
   guideHighlightEnabled,
   highlightColor,
   guideColor,
-}: UseMeasurerDerivedArgs) => {
+}: UseMesurerDerivedArgs) => {
   const activeRect = useMemo(() => {
     if (!start || !end) return null
     return {

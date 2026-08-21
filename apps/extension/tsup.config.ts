@@ -18,7 +18,9 @@ export default defineConfig({
   define: {
     "process.env.NODE_ENV": JSON.stringify("production"),
   },
-  legalComments: "none",
+  esbuildOptions: (options) => {
+    options.legalComments = "none";
+  },
   outExtension: () => ({
     js: ".js",
   }),

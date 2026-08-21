@@ -65,7 +65,7 @@ type OverlayGuides = {
   onPointerCancel: (guide: Guide, event: ReactPointerEvent<HTMLDivElement>) => void
 }
 
-type MeasurerOverlayProps = {
+type MesurerOverlayProps = {
   enabled: boolean
   interactive?: boolean
   toolMode: ToolMode
@@ -80,7 +80,7 @@ type MeasurerOverlayProps = {
   guides: OverlayGuides
 }
 
-export const MeasurerOverlay = memo(function MeasurerOverlay({
+export const MesurerOverlay = memo(function MesurerOverlay({
   enabled,
   interactive = true,
   toolMode,
@@ -93,7 +93,7 @@ export const MeasurerOverlay = memo(function MeasurerOverlay({
   selection,
   distances,
   guides,
-}: MeasurerOverlayProps) {
+}: MesurerOverlayProps) {
   const overlayVisible = enabled
   const overlayInteractive =
     interactive &&

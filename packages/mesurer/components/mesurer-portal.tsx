@@ -4,9 +4,9 @@ import { ColorPicker } from "./color-picker";
 import { RulersOverlay } from "./rulers-overlay";
 import { ScreenshotSelectOverlay } from "./screenshot-select-overlay";
 import { Toolbar } from "./toolbar";
-import { MeasurerOverlay } from "../render/measurer-overlay";
+import { MesurerOverlay } from "../render/mesurer-overlay";
 
-type MeasurerPortalProps = {
+type MesurerPortalProps = {
   portalTarget: HTMLElement | ShadowRoot;
   rootRef: RefObject<HTMLDivElement | null>;
   toolbarRef: RefObject<HTMLDivElement | null>;
@@ -24,7 +24,7 @@ type MeasurerPortalProps = {
     guides: ComponentPropsWithoutRef<typeof RulersOverlay>["guides"];
     selectedGuideIds: ComponentPropsWithoutRef<typeof RulersOverlay>["selectedGuideIds"];
   };
-  overlay: ComponentPropsWithoutRef<typeof MeasurerOverlay>;
+  overlay: ComponentPropsWithoutRef<typeof MesurerOverlay>;
   colorPicker: Omit<
     ComponentPropsWithoutRef<typeof ColorPicker>,
     "toolbarRef"
@@ -33,7 +33,7 @@ type MeasurerPortalProps = {
   toolbar: ComponentPropsWithoutRef<typeof Toolbar>;
 };
 
-export function MeasurerPortal({
+export function MesurerPortal({
   portalTarget,
   rootRef,
   toolbarRef,
@@ -43,7 +43,7 @@ export function MeasurerPortal({
   colorPicker,
   screenshot,
   toolbar,
-}: MeasurerPortalProps) {
+}: MesurerPortalProps) {
   return createPortal(
     <div
       ref={rootRef}
@@ -63,7 +63,7 @@ export function MeasurerPortal({
           selectedGuideIds={rulers.selectedGuideIds}
         />
       ) : null}
-      <MeasurerOverlay {...overlay} />
+      <MesurerOverlay {...overlay} />
       <ColorPicker {...colorPicker} toolbarRef={toolbarRef} />
       <ScreenshotSelectOverlay ref={screenshotOverlayRef} {...screenshot} />
       <Toolbar ref={toolbarRef} {...toolbar} />

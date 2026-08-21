@@ -20,7 +20,7 @@ type ToggleState = {
   setMultiMeasureEnabled: Dispatch<SetStateAction<boolean>>;
 };
 
-type UseMeasurerSettingsOptions = {
+type UseMesurerSettingsOptions = {
   activePersistence: MesurerPersistence;
   persistedSettings: MesurerStoredSettings;
   defaults: {
@@ -41,12 +41,12 @@ type UseMeasurerSettingsOptions = {
   toggles: ToggleState;
 };
 
-export const useMeasurerSettings = ({
+export const useMesurerSettings = ({
   activePersistence,
   persistedSettings,
   defaults,
   toggles,
-}: UseMeasurerSettingsOptions) => {
+}: UseMesurerSettingsOptions) => {
   const [highlightColor, setHighlightColor] = useState(
     persistedSettings.highlightColor ?? defaults.highlightColor,
   );

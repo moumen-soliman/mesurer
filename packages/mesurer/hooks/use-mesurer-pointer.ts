@@ -29,7 +29,7 @@ type GuidePreview = {
   position: number
 }
 
-type UseMeasurerPointerArgs = {
+type UseMesurerPointerArgs = {
   document: Document
   window: Window
   toolbarRef: MutableRefObject<HTMLDivElement | null>
@@ -83,7 +83,7 @@ type UseMeasurerPointerArgs = {
   clearSelectionRect: () => void
 }
 
-export const useMeasurerPointer = ({
+export const useMesurerPointer = ({
   document,
   window,
   toolbarRef,
@@ -130,7 +130,7 @@ export const useMeasurerPointer = ({
   setHoverElement,
   setHoverPointer,
   clearSelectionRect,
-}: UseMeasurerPointerArgs) => {
+}: UseMesurerPointerArgs) => {
   const hoverFrameRef = useRef<number | null>(null)
   const hoverPointRef = useRef<Point | null>(null)
   const selectionCacheRef = useRef({

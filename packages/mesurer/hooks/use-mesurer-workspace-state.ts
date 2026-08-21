@@ -6,10 +6,10 @@ import { useDragState } from "./use-drag-state";
 import { useGuideState } from "./use-guide-state";
 import { useMeasureToggles } from "./use-measure-toggles";
 import { useMeasurementState } from "./use-measurement-state";
-import { useMeasurerLocalState } from "./use-measurer-local-state";
+import { useMesurerLocalState } from "./use-mesurer-local-state";
 import { useOverlayRefs } from "./use-overlay-refs";
 
-type UseMeasurerWorkspaceStateOptions = {
+type UseMesurerWorkspaceStateOptions = {
   persistedState: MesurerStoredWorkspace | null;
   snapEnabledDefault: boolean;
   snapGuidesEnabledDefault: boolean;
@@ -17,13 +17,13 @@ type UseMeasurerWorkspaceStateOptions = {
   multiMeasureEnabledDefault: boolean;
 };
 
-export const useMeasurerWorkspaceState = ({
+export const useMesurerWorkspaceState = ({
   persistedState,
   snapEnabledDefault,
   snapGuidesEnabledDefault,
   selectNewGuideEnabledDefault,
   multiMeasureEnabledDefault,
-}: UseMeasurerWorkspaceStateOptions) => {
+}: UseMesurerWorkspaceStateOptions) => {
   const selectionRectRef = useRef<Rect | null>(null);
   const enabledRef = useRef(false);
   const toolModeRef = useRef<ToolMode>(
@@ -47,7 +47,7 @@ export const useMeasurerWorkspaceState = ({
   const selectedGuideIdsRef = useRef<string[]>(persistedState?.selectedGuideIds ?? []);
 
   const { overlayRef, selectedElementRef, hoverElementRef } = useOverlayRefs();
-  const localState = useMeasurerLocalState({
+  const localState = useMesurerLocalState({
     selectedElementRef,
     hoverElementRef,
     selectionRectRef,
@@ -111,4 +111,4 @@ export const useMeasurerWorkspaceState = ({
   };
 };
 
-export type MeasurerWorkspaceState = ReturnType<typeof useMeasurerWorkspaceState>;
+export type MesurerWorkspaceState = ReturnType<typeof useMesurerWorkspaceState>;
