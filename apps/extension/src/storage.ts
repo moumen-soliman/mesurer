@@ -21,6 +21,19 @@ export const createExtensionPersistence = async (
   let settings = normalizeStoredSettings(stored[SETTINGS_KEY]);
   let workspace = normalizeStoredWorkspace(stored[key]);
   let errorHandler: ((error: unknown) => void) | undefined;
+  let settingsTimer: ReturnType<typeof setTimeout> | null = null;
+
+  const flushSettings = () => {
+    settingsTimer = null;
+    void chrome.storage.local.set({ [SETTINGS_KEY]: settings }).catch((error) => {
+      errorHandler?.(error);
+    });
+  };
+
+  const scheduleSettingsSave = () => {
+    if (settingsTimer !== null) clearTimeout(settingsTimer);
+    settingsTimer = setTimeout(flushSettings, 100);
+  };
 
   const snapshot = (): MesurerPersistenceSnapshot => ({ settings, workspace });
 
@@ -28,9 +41,7 @@ export const createExtensionPersistence = async (
     load: snapshot,
     saveSettings: (next) => {
       settings = normalizeStoredSettings(next);
-      void chrome.storage.local.set({ [SETTINGS_KEY]: settings }).catch((error) => {
-        errorHandler?.(error);
-      });
+      scheduleSettingsSave();
     },
     saveWorkspace: (next) => {
       workspace = normalizeStoredWorkspace(next);
@@ -46,6 +57,8 @@ export const createExtensionPersistence = async (
     },
     clearSettings: () => {
       settings = {};
+      if (settingsTimer !== null) clearTimeout(settingsTimer);
+      settingsTimer = null;
       void chrome.storage.local.remove(SETTINGS_KEY).catch((error) => {
         errorHandler?.(error);
       });

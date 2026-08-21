@@ -42,8 +42,9 @@ export const useLiveElementTracking = (params: LiveParams) => {
 
     const tick = () => {
       const current = paramsRef.current
-      current.setMeasurements((prev) =>
-        prev.map((measurement) => {
+      current.setMeasurements((prev) => {
+        let changed = false
+        const next = prev.map((measurement) => {
           if (
             !measurement.elementRef ||
             !current.document.contains(measurement.elementRef)
@@ -54,6 +55,7 @@ export const useLiveElementTracking = (params: LiveParams) => {
           const rect = getRectFromDom(measurement.elementRef)
           if (rectAlmostEqual(rect, measurement.rect)) return measurement
 
+          changed = true
           return {
             ...measurement,
             rect,
@@ -61,7 +63,8 @@ export const useLiveElementTracking = (params: LiveParams) => {
             originRect: undefined,
           }
         })
-      )
+        return changed || prev.length === 0 ? next : prev
+      })
 
       current.setActiveMeasurement((prev) => {
         if (!prev?.elementRef || !current.document.contains(prev.elementRef))
@@ -76,8 +79,9 @@ export const useLiveElementTracking = (params: LiveParams) => {
         }
       })
 
-      current.setHeldDistances((prev) =>
-        prev.map((distance) => {
+      current.setHeldDistances((prev) => {
+        let changed = false
+        const next = prev.map((distance) => {
           const canTrackA =
             distance.elementRefA && current.document.contains(distance.elementRefA)
           const canTrackB =
@@ -105,12 +109,14 @@ export const useLiveElementTracking = (params: LiveParams) => {
             ownerWindow,
           )
 
+          changed = true
           return {
             ...updated,
             id: distance.id,
           }
         })
-      )
+        return changed || prev.length === 0 ? next : prev
+      })
 
       const selected = current.selectedElementRef.current
       if (current.selectionEnabled && selected && current.document.contains(selected)) {
@@ -122,8 +128,9 @@ export const useLiveElementTracking = (params: LiveParams) => {
       }
 
       if (current.selectionEnabled) {
-        current.setSelectedMeasurements((prev) =>
-          prev.map((measurement) => {
+        current.setSelectedMeasurements((prev) => {
+          let changed = false
+          const next = prev.map((measurement) => {
             if (
               !measurement.elementRef ||
               !current.document.contains(measurement.elementRef)
@@ -132,12 +139,14 @@ export const useLiveElementTracking = (params: LiveParams) => {
             }
             const next = getInspectMeasurement(measurement.elementRef, ownerWindow)
             if (rectAlmostEqual(next.rect, measurement.rect)) return measurement
+            changed = true
             return {
               ...next,
               id: measurement.id,
             }
           })
-        )
+          return changed || prev.length === 0 ? next : prev
+        })
       }
 
       const hover = current.hoverElementRef.current
@@ -147,11 +156,9 @@ export const useLiveElementTracking = (params: LiveParams) => {
           prev && rectAlmostEqual(prev, rect) ? prev : rect
         )
       }
-
       frameRef.current = ownerWindow.requestAnimationFrame(tick)
     }
-
-    frameRef.current = ownerWindow.requestAnimationFrame(tick)
+      frameRef.current = ownerWindow.requestAnimationFrame(tick)
 
     return () => {
       if (frameRef.current) {

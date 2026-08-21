@@ -120,7 +120,9 @@ export function ColorPicker({
     if (!panel || !toolbar) return
 
     let frame = 0
+    let scheduled = false
     const updatePosition = () => {
+      scheduled = false
       const toolbarRect = toolbar.getBoundingClientRect()
       const panelRect = panel.getBoundingClientRect()
       const left = Math.min(
@@ -134,11 +136,27 @@ export function ColorPicker({
         : Math.max(8, aboveTop)
       panel.style.left = `${left}px`
       panel.style.top = `${top}px`
+    }
+    const schedulePosition = () => {
+      if (scheduled) return
+      scheduled = true
       frame = ownerWindow.requestAnimationFrame(updatePosition)
     }
 
-    frame = ownerWindow.requestAnimationFrame(updatePosition)
-    return () => ownerWindow.cancelAnimationFrame(frame)
+    schedulePosition()
+    ownerWindow.addEventListener("resize", schedulePosition)
+    ownerWindow.addEventListener("scroll", schedulePosition, true)
+    ownerWindow.addEventListener("pointermove", schedulePosition, true)
+    const resizeObserver = new ResizeObserver(schedulePosition)
+    resizeObserver.observe(toolbar)
+    resizeObserver.observe(panel)
+    return () => {
+      if (scheduled) ownerWindow.cancelAnimationFrame(frame)
+      resizeObserver.disconnect()
+      ownerWindow.removeEventListener("resize", schedulePosition)
+      ownerWindow.removeEventListener("scroll", schedulePosition, true)
+      ownerWindow.removeEventListener("pointermove", schedulePosition, true)
+    }
   }, [active, ownerWindow, toolbarRef, formats, sample, unsupported, favoriteFormat])
 
   useLayoutEffect(() => {

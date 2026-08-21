@@ -40,15 +40,22 @@ export const usePersistenceLifecycle = ({
   }
 
   const persistSettingsRef = useRef<(() => void) | null>(null)
-  if (persistSettingsRef.current !== persistSettings) {
+
+  useEffect(() => {
+    if (persistSettingsRef.current === persistSettings) return
     persistSettingsRef.current = persistSettings
     if (applyingExternalPersistenceRef.current) {
       applyingExternalPersistenceRef.current = false
-    } else {
-      persistSettings()
-      if (settingsPersistOnReload) persistState()
+      return
     }
-  }
+    persistSettings()
+    if (settingsPersistOnReload) persistState()
+  }, [
+    applyingExternalPersistenceRef,
+    persistSettings,
+    persistState,
+    settingsPersistOnReload,
+  ])
 
   useEffect(() => {
     const unsubscribe = activePersistence.subscribe?.(applyPersistenceSnapshot)
