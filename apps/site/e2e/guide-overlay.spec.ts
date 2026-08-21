@@ -369,6 +369,32 @@ test("settings opens with all sections visible", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Selection" })).toBeVisible();
 });
 
+test("color format multi-select supports keyboard navigation", async ({ page }) => {
+  await page.goto("/e2e/fixtures/guide-overlay.html");
+  await page.getByRole("button", { name: "Settings" }).click();
+
+  const dialog = page.getByRole("dialog", { name: "Settings" });
+  const trigger = dialog.getByRole("combobox", { name: "Color formats" });
+  await trigger.scrollIntoViewIfNeeded();
+  await trigger.focus();
+  await trigger.press("Enter");
+
+  const listbox = dialog.getByRole("listbox", { name: "Color formats" });
+  await expect(listbox).toBeVisible();
+  await expect(listbox.getByRole("option", { name: "hex" })).toBeFocused();
+
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Enter");
+  await expect(listbox.getByRole("option", { name: "hsl" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+
+  await page.keyboard.press("Escape");
+  await expect(trigger).toBeFocused();
+});
+
 test("guide sliders do not drag the toolbar", async ({ page }) => {
   await page.goto("/e2e/fixtures/guide-overlay.html");
   await page.getByRole("button", { name: "Settings" }).click();

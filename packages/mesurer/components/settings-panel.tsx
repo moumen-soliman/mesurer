@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState, type Dispatch, type PointerEvent as ReactPointerEvent, type ReactNode, type SetStateAction } from "react"
+import { useEffect, useId, useRef, useState, type Dispatch, type PointerEvent as ReactPointerEvent, type ReactNode, type SetStateAction } from "react"
 import packageManifest from "../package.json"
 import type { ColorPickerFormat } from "../core/colors"
 import { colorToHex, parseCssColor } from "../core/colors"
@@ -408,10 +408,11 @@ function FormatMultiSelect({
   onChange: (formats: ColorPickerFormat[]) => void
 }) {
   const [open, setOpen] = useState(false)
+  const [activeIndex, setActiveIndex] = useState(0)
   const containerRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const optionRefs = useRef<Array<HTMLButtonElement | null>>([])
-  const listboxId = "color-formats-listbox"
+  const listboxId = `${useId()}-color-formats`
 
   useEffect(() => {
     const handlePointerDown = (event: Event) => {
@@ -430,6 +431,14 @@ function FormatMultiSelect({
     onChange([...selectedFormats, format])
   }
 
+  const openMenu = () => {
+    const selectedIndex = formats.findIndex((format) => selectedFormats.includes(format))
+    const nextIndex = selectedIndex >= 0 ? selectedIndex : 0
+    setActiveIndex(nextIndex)
+    setOpen(true)
+    return nextIndex
+  }
+
   return (
     <div ref={containerRef} className="msr:relative msr:w-full">
       <button
@@ -441,14 +450,20 @@ function FormatMultiSelect({
         aria-haspopup="listbox"
         aria-controls={listboxId}
         className="msr:relative msr:h-6 msr:w-full msr:rounded-[5px] msr:border msr:border-ink-200 msr:bg-white msr:px-1.5 msr:pr-6 msr:text-left msr:text-[11px] msr:text-ink-700 msr:outline-none msr:focus-visible:shadow-[inset_0_0_0_1px_#0d99ff]"
-        onClick={() => setOpen((current) => !current)}
+        onClick={() => (open ? setOpen(false) : openMenu())}
         onKeyDown={(event) => {
-          if (event.key === "ArrowDown") {
+          if (event.key === "ArrowDown" || event.key === "Enter" || event.key === " ") {
             event.preventDefault()
+            event.stopPropagation()
+            const nextIndex = open ? activeIndex : openMenu()
             setOpen(true)
-            ownerWindow.requestAnimationFrame(() => optionRefs.current[0]?.focus())
+            ownerWindow.requestAnimationFrame(() => optionRefs.current[nextIndex]?.focus())
           }
-          if (event.key === "Escape") setOpen(false)
+          if (event.key === "Escape") {
+            event.preventDefault()
+            event.stopPropagation()
+            setOpen(false)
+          }
         }}
       >
         {selectedFormats.join(", ")}
@@ -471,22 +486,34 @@ function FormatMultiSelect({
                 type="button"
                 role="option"
                 aria-selected={selected}
+                tabIndex={formatIndex === activeIndex ? 0 : -1}
                 className={cn(
-                  "msr:flex msr:h-6 msr:w-full msr:items-center msr:justify-between msr:rounded-[3px] msr:px-1.5 msr:text-left msr:text-[11px] msr:text-ink-700 msr:outline-none msr:hover:bg-ink-50",
+                  "msr:flex msr:h-6 msr:w-full msr:items-center msr:justify-between msr:rounded-[3px] msr:px-1.5 msr:text-left msr:text-[11px] msr:text-ink-700 msr:outline-none msr:hover:bg-ink-50 msr:focus-visible:bg-ink-50",
                 )}
                 onClick={() => toggleFormat(format)}
+                onFocus={() => setActiveIndex(formatIndex)}
                 onKeyDown={(event) => {
                   if (event.key === "ArrowDown" || event.key === "ArrowUp") {
                     event.preventDefault()
                     const direction = event.key === "ArrowDown" ? 1 : -1
-                    const nextIndex = Math.min(
-                      formats.length - 1,
-                      Math.max(0, formatIndex + direction),
-                    )
+                    const nextIndex = Math.min(formats.length - 1, Math.max(0, formatIndex + direction))
+                    setActiveIndex(nextIndex)
                     optionRefs.current[nextIndex]?.focus()
+                  }
+                  if (event.key === "Home" || event.key === "End") {
+                    event.preventDefault()
+                    const nextIndex = event.key === "Home" ? 0 : formats.length - 1
+                    setActiveIndex(nextIndex)
+                    optionRefs.current[nextIndex]?.focus()
+                  }
+                  if (event.key === " " || event.key === "Enter") {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    toggleFormat(format)
                   }
                   if (event.key === "Escape") {
                     event.preventDefault()
+                    event.stopPropagation()
                     setOpen(false)
                     triggerRef.current?.focus()
                   }
