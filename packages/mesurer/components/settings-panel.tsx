@@ -77,7 +77,7 @@ function ControlShell({ left, right }: { left: ReactNode; right: ReactNode }) {
       className="mesurer-control-shell msr:group msr:flex msr:h-6 msr:w-full msr:min-w-0 msr:items-center msr:overflow-hidden msr:rounded-[5px] msr:border msr:border-transparent msr:bg-ink-50 msr:hover:border-ink-200"
     >
       <div className="mesurer-control-focus msr:flex msr:h-full msr:min-w-0 msr:flex-1 msr:items-center msr:focus-within:rounded-l-[5px] msr:focus-within:outline msr:focus-within:outline-1 msr:focus-within:outline-[#0d99ff] msr:focus-within:outline-offset-[-1px]">{left}</div>
-      <div className="mesurer-control-focus msr:box-border msr:flex msr:h-full msr:w-12 msr:shrink-0 msr:items-center msr:border-l msr:border-transparent msr:group-hover:border-ink-200 msr:focus-within:rounded-r-[5px] msr:focus-within:outline msr:focus-within:outline-1 msr:focus-within:outline-[#0d99ff] msr:focus-within:outline-offset-[-1px]">{right}</div>
+      <div className="mesurer-control-focus msr:box-border msr:flex msr:h-full msr:w-12 msr:shrink-0 msr:items-center msr:border-l msr:border-ink-200 msr:focus-within:rounded-r-[5px] msr:focus-within:outline msr:focus-within:outline-1 msr:focus-within:outline-[#0d99ff] msr:focus-within:outline-offset-[-1px]">{right}</div>
     </div>
   )
 }
@@ -237,7 +237,7 @@ function SliderControl({
           <input
           type="text"
           aria-label={`${label} value`}
-          className="msr:h-full msr:w-full msr:shrink-0 msr:border-0 msr:bg-transparent msr:px-2 msr:text-center msr:font-mono msr:text-[12px] msr:font-medium msr:tabular-nums msr:text-ink-700 msr:outline-none"
+          className="msr:h-full msr:w-full msr:shrink-0 msr:border-0 msr:bg-transparent msr:px-1 msr:text-right msr:font-mono msr:text-[12px] msr:font-medium msr:tabular-nums msr:text-ink-700 msr:outline-none"
           style={{ boxSizing: "border-box", borderRadius: "0 5px 5px 0", lineHeight: "1rem" }}
           value={editing ? draftValue : formatValue(value)}
           onFocus={() => {
@@ -357,7 +357,7 @@ function ColorField({ label, value, fallback, ownerWindow, onChange }: {
             inputMode="numeric"
             value={alphaFocused ? (alphaDraft ? `${alphaDraft}%` : "") : `${alphaValue}%`}
             maxLength={4}
-            className="msr:h-full msr:w-full msr:bg-transparent msr:px-1 msr:text-center msr:font-mono msr:text-[12px] msr:tabular-nums msr:text-ink-700 msr:outline-none"
+            className="msr:h-full msr:w-full msr:bg-transparent msr:px-1 msr:text-right msr:font-mono msr:text-[12px] msr:tabular-nums msr:text-ink-700 msr:outline-none"
             onFocus={() => {
               setAlphaDraft(String(alphaValue))
               setAlphaFocused(true)
@@ -393,6 +393,28 @@ function SectionDivider() {
       aria-hidden="true"
       className="msr:h-px msr:w-full msr:shrink-0 msr:bg-[#e6e6e6]"
     />
+  )
+}
+
+function SettingsSection({
+  title,
+  ariaLabel,
+  children,
+}: {
+  title: string
+  ariaLabel: string
+  children: ReactNode
+}) {
+  return (
+    <section
+      className={`msr:grid msr:w-full ${SETTINGS_COLUMNS} msr:items-center msr:gap-0 msr:px-3 msr:py-2`}
+      aria-label={ariaLabel}
+    >
+      <h2 className="msr:col-span-2 msr:flex msr:h-8 msr:items-center msr:text-[11px] msr:font-semibold msr:text-ink-500">
+        {title}
+      </h2>
+      {children}
+    </section>
   )
 }
 
@@ -574,13 +596,12 @@ export function SettingsPanel({
 
   return (
     <div className="mesurer-settings-panel msr:flex msr:h-full msr:w-full msr:min-w-0 msr:flex-col msr:gap-0 msr:overflow-y-auto" onPointerDown={(event) => event.stopPropagation()}>
-      <section className={`msr:grid msr:w-full ${SETTINGS_COLUMNS} msr:items-center msr:gap-0 msr:px-3 msr:py-2`} aria-label="Guide settings">
-        <h2 className="msr:col-span-2 msr:flex msr:h-8 msr:items-center msr:text-[11px] msr:font-semibold msr:text-ink-500">Guides</h2>
+      <SettingsSection title="Guides" ariaLabel="Guide settings">
         <ColorField label="Color" value={guideColor} fallback="#f97316" ownerWindow={ownerWindow} onChange={setGuideColor} />
         <SliderControl label="Weight" min={1} inputMin={0.01} max={4} step={1} value={guideStyle.width} formatValue={(value) => `${value}px`} parseInput={(input) => Number.parseFloat(input)} onChange={(value) => setGuideStyle((style) => ({ ...style, width: value }))} />
       <div className="msr:col-span-2 msr:grid msr:grid-cols-[78px_minmax(0,1fr)] msr:items-center msr:gap-0">
           <span className="msr:text-[12px] msr:text-ink-700">Pattern</span>
-          <div className="msr:flex" role="radiogroup" aria-label="Guide pattern" onMouseLeave={patternTooltip.onTooltipContainerLeave}>
+          <div className="msr:flex msr:gap-1" role="radiogroup" aria-label="Guide pattern" onMouseLeave={patternTooltip.onTooltipContainerLeave}>
             {GUIDE_PATTERNS.map(({ value, label }) => {
               const selected = guideStyle.pattern === value
               const tooltipId = `guide-pattern-${value}`
@@ -616,20 +637,18 @@ export function SettingsPanel({
         <div className="msr:col-span-2"><SettingsSwitch label="Snap" checked={snapGuidesEnabled} onChange={setSnapGuidesEnabled} /></div>
         <div className="msr:col-span-2"><SettingsSwitch label="Highlight" checked={guideHighlightEnabled} onChange={setGuideHighlightEnabled} /></div>
         <div className="msr:col-span-2"><SettingsSwitch label="Select" checked={selectNewGuideEnabled} onChange={setSelectNewGuideEnabled} /></div>
-      </section>
+      </SettingsSection>
 
       <SectionDivider />
-      <section className={`msr:grid msr:w-full ${SETTINGS_COLUMNS} msr:items-center msr:gap-0 msr:px-3 msr:py-2`} aria-label="Selection settings">
-        <h2 className="msr:col-span-2 msr:flex msr:h-8 msr:items-center msr:text-[11px] msr:font-semibold msr:text-ink-500">Selection</h2>
+      <SettingsSection title="Selection" ariaLabel="Selection settings">
         <ColorField label="Color" value={highlightColor} fallback="#0d99ff" ownerWindow={ownerWindow} onChange={setHighlightColor} />
         <div className="msr:col-span-2"><SettingsSwitch label="Hover" checked={hoverHighlight} onChange={setHoverHighlight} /></div>
         <div className="msr:col-span-2"><SettingsSwitch label="Element snap" checked={snapEnabled} onChange={setSnapEnabled} /></div>
         <div className="msr:col-span-2"><SettingsSwitch label="Stack" checked={multiMeasureEnabled} onChange={setMultiMeasureEnabled} /></div>
-      </section>
+      </SettingsSection>
 
       <SectionDivider />
-      <section className={`msr:grid msr:w-full ${SETTINGS_COLUMNS} msr:items-center msr:gap-0 msr:px-3 msr:py-2`} aria-label="Color settings">
-        <h2 className="msr:col-span-2 msr:flex msr:h-8 msr:items-center msr:text-[11px] msr:font-semibold msr:text-ink-500">Color picker</h2>
+      <SettingsSection title="Color picker" ariaLabel="Color settings">
         <div className={`msr:col-span-2 msr:grid msr:min-h-8 ${SETTINGS_COLUMNS} msr:items-start msr:gap-0`}>
           <span className="msr:flex msr:h-8 msr:items-center msr:text-[12px] msr:text-ink-700">Format</span>
           <FormatMultiSelect ownerWindow={ownerWindow} formats={COLOR_FORMATS} selectedFormats={colorFormats} onChange={setColorFormats} />
@@ -643,11 +662,10 @@ export function SettingsPanel({
             <span aria-hidden="true" className="msr:pointer-events-none msr:absolute msr:right-2 msr:top-1/2 msr:size-1.5 msr:-translate-y-1/2 msr:rotate-45 msr:border-r msr:border-b msr:border-ink-500" />
           </span>
         </label>
-      </section>
+      </SettingsSection>
 
       <SectionDivider />
-      <section className={`msr:grid msr:w-full ${SETTINGS_COLUMNS} msr:items-center msr:gap-0 msr:px-3 msr:py-2`} aria-label="Screenshot settings">
-        <h2 className="msr:col-span-2 msr:flex msr:h-8 msr:items-center msr:text-[11px] msr:font-semibold msr:text-ink-500">Screenshot</h2>
+      <SettingsSection title="Screenshot" ariaLabel="Screenshot settings">
         <div className="msr:col-span-2">
           <SettingsSwitch
             label="Copy"
@@ -672,18 +690,16 @@ export function SettingsPanel({
             }
           />
         </div>
-      </section>
+      </SettingsSection>
 
       <SectionDivider />
-      <section className={`msr:grid msr:w-full ${SETTINGS_COLUMNS} msr:items-center msr:gap-0 msr:px-3 msr:py-2`} aria-label="Ruler settings">
-        <h2 className="msr:col-span-2 msr:flex msr:h-8 msr:items-center msr:text-[11px] msr:font-semibold msr:text-ink-500">Rulers</h2>
+      <SettingsSection title="Rulers" ariaLabel="Ruler settings">
         <SliderControl label="Opacity" min={0.2} max={1} step={0.05} value={rulerSettings.opacity} formatValue={(value) => `${Math.round(value * 100)}%`} parseInput={(input) => Number.parseFloat(input) / 100} onChange={(value) => setRulerSettings((settings) => ({ ...settings, opacity: value }))} />
         <div className="msr:col-span-2"><SettingsSwitch label="Edge reveal" checked={rulerSettings.edgeReveal} onChange={(edgeReveal) => setRulerSettings((settings) => ({ ...settings, edgeReveal }))} /></div>
-      </section>
+      </SettingsSection>
 
       <SectionDivider />
-      <section className={`msr:grid msr:w-full ${SETTINGS_COLUMNS} msr:items-center msr:gap-0 msr:px-3 msr:py-2`} aria-label="General settings">
-        <h2 className="msr:col-span-2 msr:flex msr:h-8 msr:items-center msr:text-[11px] msr:font-semibold msr:text-ink-500">General</h2>
+      <SettingsSection title="General" ariaLabel="General settings">
         <div className="msr:col-span-2"><SettingsSwitch label="Persist" checked={persistOnReload} onChange={setPersistOnReload} /></div>
         <div className={`msr:col-span-2 msr:grid msr:h-8 ${SETTINGS_COLUMNS} msr:items-center msr:gap-0 msr:text-[12px] msr:text-ink-700`}>
           <span>Version</span>
@@ -707,7 +723,7 @@ export function SettingsPanel({
             Clear workspace
           </button>
         </div>
-      </section>
+      </SettingsSection>
     </div>
   )
 }
