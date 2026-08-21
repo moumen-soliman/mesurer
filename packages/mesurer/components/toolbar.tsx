@@ -13,6 +13,7 @@ import type { ToolMode } from "../core/types";
 import { cn } from "../core/utils";
 import { useToolbarDrag } from "../hooks/use-toolbar-drag";
 import { useToolbarTooltip } from "../hooks/use-toolbar-tooltip";
+import { useSettingsMenuPlacement } from "../hooks/use-settings-menu-placement";
 import { ScreenshotPreview } from "./screenshot-preview";
 import { Tooltip } from "./tooltip";
 import {
@@ -74,7 +75,6 @@ type ToolbarProps = {
   settings: ToolbarSettings;
 };
 const GUIDE_MENU_WIDTH = 176;
-const SETTINGS_MENU_WIDTH = 266;
 const VIEWPORT_PADDING = 8;
 
 type ToolbarButtonProps = {
@@ -219,6 +219,13 @@ function ToolbarComponent(
   const tooltipSide: "top" | "bottom" =
     nearTop && !nearBottom ? "bottom" : "top";
   const menuSide: "top" | "bottom" = nearBottom ? "top" : "bottom";
+  const { menuRef: settingsMenuRef, placement: settingsPlacement } =
+    useSettingsMenuPlacement({
+      anchorRef: settingsRef,
+      eventTarget,
+      open: settingsOpen,
+      refreshKey: `${position.x}:${position.y}`,
+    });
 
   const selectMode = useCallback(() => {
     setEnabled(true);
@@ -331,19 +338,6 @@ function ToolbarComponent(
   }, [eventTarget, guideMenuOpen, guideOrientation, settingsOpen, updateMenuAlign]);
 
   const toolbarWidth = settingsRef.current?.parentElement?.offsetWidth ?? 0;
-  const settingsMenuWidth = Math.min(
-    SETTINGS_MENU_WIDTH,
-    Math.max(0, eventTarget.innerWidth - VIEWPORT_PADDING * 2),
-  );
-  const settingsAnchorRight =
-    settingsRef.current?.getBoundingClientRect().right ??
-    position.x + toolbarWidth;
-  const settingsMenuLeft = settingsAnchorRight + 4 - settingsMenuWidth;
-  const settingsMenuShift = Math.max(
-    0,
-    VIEWPORT_PADDING - settingsMenuLeft,
-  );
-  const settingsMenuRight = -4 - settingsMenuShift;
   const toastAlignment =
     position.x <= 8
       ? "msr:left-0"
@@ -647,13 +641,18 @@ function ToolbarComponent(
         </ToolbarButton>
         {settingsOpen ? (
           <div
+            ref={settingsMenuRef}
             className={cn(
-              "mesurer-menu-surface msr:absolute msr:z-[70] msr:h-[500px] msr:max-h-[calc(100dvh-24px)] msr:w-auto msr:max-w-[calc(100vw-16px)] msr:overflow-hidden msr:rounded-lg msr:border msr:border-ink-200 msr:bg-white msr:p-0",
-              menuSide === "bottom"
+              "mesurer-menu-surface msr:absolute msr:z-[70] msr:w-auto msr:max-w-[calc(100vw-16px)] msr:overflow-hidden msr:rounded-lg msr:border msr:border-ink-200 msr:bg-white msr:p-0",
+              settingsPlacement.side === "bottom"
                 ? "msr:top-full msr:mt-2"
                 : "msr:bottom-full msr:mb-2",
             )}
-            style={{ right: settingsMenuRight }}
+            style={{
+              right: settingsPlacement.right,
+              height: settingsPlacement.height,
+              maxHeight: settingsPlacement.height,
+            }}
             data-mesurer-inspector-ui="true"
             role="dialog"
             aria-label="Settings"
