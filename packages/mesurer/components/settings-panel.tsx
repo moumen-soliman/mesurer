@@ -237,7 +237,7 @@ function SliderControl({
           <input
           type="text"
           aria-label={`${label} value`}
-          className="msr:h-full msr:w-full msr:shrink-0 msr:border-0 msr:bg-transparent msr:px-1 msr:text-right msr:font-mono msr:text-[12px] msr:font-medium msr:tabular-nums msr:text-ink-700 msr:outline-none"
+           className="msr:h-full msr:w-full msr:shrink-0 msr:border-0 msr:bg-transparent msr:px-1 msr:text-left msr:font-mono msr:text-[12px] msr:font-medium msr:tabular-nums msr:text-ink-700 msr:outline-none"
           style={{ boxSizing: "border-box", borderRadius: "0 5px 5px 0", lineHeight: "1rem" }}
           value={editing ? draftValue : formatValue(value)}
           onFocus={() => {
@@ -357,7 +357,7 @@ function ColorField({ label, value, fallback, ownerWindow, onChange }: {
             inputMode="numeric"
             value={alphaFocused ? (alphaDraft ? `${alphaDraft}%` : "") : `${alphaValue}%`}
             maxLength={4}
-            className="msr:h-full msr:w-full msr:bg-transparent msr:px-1 msr:text-right msr:font-mono msr:text-[12px] msr:tabular-nums msr:text-ink-700 msr:outline-none"
+             className="msr:h-full msr:w-full msr:bg-transparent msr:px-1 msr:text-left msr:font-mono msr:text-[12px] msr:tabular-nums msr:text-ink-700 msr:outline-none"
             onFocus={() => {
               setAlphaDraft(String(alphaValue))
               setAlphaFocused(true)
