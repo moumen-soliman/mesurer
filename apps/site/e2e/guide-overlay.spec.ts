@@ -443,6 +443,19 @@ test("guide pattern renders as a real dashed line", async ({ page }) => {
   await expect(line).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
 });
 
+test("placing a guide after a held pointer does not retain drag state", async ({ page }) => {
+  await page.goto("/e2e/fixtures/guide-overlay.html");
+  await page.getByRole("button", { name: "Guides (G)" }).click();
+
+  await page.mouse.move(300, 200);
+  await page.mouse.down();
+  await page.waitForTimeout(200);
+  await page.mouse.up();
+  await page.mouse.click(420, 200);
+
+  await expect(page.locator("[data-mesurer-guide]")).toHaveCount(2);
+});
+
 test("placed guides stay visible and update while settings is open", async ({
   page,
 }) => {

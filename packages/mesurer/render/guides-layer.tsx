@@ -8,6 +8,7 @@ type GuideColors = {
   hover: string
   default: string
   preview: string
+  previewEmphasized: boolean
 }
 
 type GuidesLayerProps = {
@@ -44,6 +45,8 @@ export function GuidesLayer({
           orientation={preview.orientation}
           position={preview.position}
           color={colors.preview}
+          style={style}
+          emphasized={colors.previewEmphasized}
         />
       ) : null}
       {guides.map((guide) => (

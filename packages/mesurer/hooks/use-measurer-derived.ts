@@ -247,6 +247,7 @@ export const useMeasurerDerived = ({
     guideColorHover,
     guideColorDefault,
     guideColorPreview,
+    guidePreviewEmphasized,
   } = useMemo(
     () => ({
       outlineColor: `color-mix(in oklch, ${highlightColor} 80%, transparent)`,
@@ -255,6 +256,7 @@ export const useMeasurerDerived = ({
       guideColorHover: `color-mix(in oklch, ${guideColor} ${guideHighlightEnabled ? 90 : 70}%, transparent)`,
       guideColorDefault: `color-mix(in oklch, ${guideColor} 70%, transparent)`,
       guideColorPreview: `color-mix(in oklch, ${guideColor} ${guideHighlightEnabled ? 50 : 70}%, transparent)`,
+      guidePreviewEmphasized: guideHighlightEnabled,
     }),
     [guideColor, guideHighlightEnabled, highlightColor]
   )
@@ -304,6 +306,7 @@ export const useMeasurerDerived = ({
     guideColorHover,
     guideColorDefault,
     guideColorPreview,
+    guidePreviewEmphasized,
     hoverRectToShow,
     selectedEdgeVisibility,
     hoverEdgeVisibility,

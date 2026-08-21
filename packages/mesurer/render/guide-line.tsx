@@ -35,7 +35,7 @@ export function GuideLine({
     : hovered
       ? colorHover
       : colorDefault
-  const strokeWidth = style.width
+  const strokeWidth = selected || hovered ? Math.max(style.width, 1) : style.width
   const isSolid = style.pattern === "solid"
   const backgroundImage = style.pattern === "solid"
     ? undefined
@@ -109,13 +109,20 @@ type GuidePreviewLineProps = {
   orientation: "vertical" | "horizontal"
   position: number
   color: string
+  style: GuideStyle
+  emphasized: boolean
 }
 
 export function GuidePreviewLine({
   orientation,
   position,
   color,
+  style,
+  emphasized,
 }: GuidePreviewLineProps) {
+  const strokeWidth = emphasized ? Math.max(style.width, 1) : style.width
+  const strokeOffset = GUIDE_HITBOX_SIZE / 2 - Math.floor((strokeWidth - 1) / 2)
+
   return (
     <div
       className="msr:pointer-events-none msr:absolute"
@@ -140,18 +147,20 @@ export function GuidePreviewLine({
         style={
           orientation === "vertical"
             ? {
-                left: GUIDE_HITBOX_SIZE / 2 - 1,
+                left: strokeOffset,
                 top: 0,
-                width: 2,
+                width: strokeWidth,
                 height: "100%",
                 backgroundColor: color,
+                opacity: style.opacity,
               }
             : {
-                top: GUIDE_HITBOX_SIZE / 2 - 1,
+                top: strokeOffset,
                 left: 0,
-                height: 2,
+                height: strokeWidth,
                 width: "100%",
                 backgroundColor: color,
+                opacity: style.opacity,
               }
         }
       />

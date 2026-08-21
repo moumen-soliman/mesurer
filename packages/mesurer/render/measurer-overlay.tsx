@@ -57,6 +57,7 @@ type OverlayGuides = {
     hover: string
     default: string
     preview: string
+    previewEmphasized: boolean
   }
   preview: { orientation: "vertical" | "horizontal"; position: number } | null
   onPointerDown: (guide: Guide, event: ReactPointerEvent<HTMLDivElement>) => void

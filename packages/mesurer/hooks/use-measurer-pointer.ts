@@ -404,6 +404,10 @@ export const useMeasurerPointer = ({
       if (!enabled) return
       clearGuideDragHold()
       if (guidesEnabled) {
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+          event.currentTarget.releasePointerCapture(event.pointerId)
+        }
+        setDraggingGuideId(null)
         setStart(null)
         setEnd(null)
         setIsDragging(false)
