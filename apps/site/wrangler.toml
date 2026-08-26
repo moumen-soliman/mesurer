@@ -1,7 +1,3 @@
 name = "mesurer-site"
 compatibility_date = "2026-04-13"
-preview_urls = true
 pages_build_output_dir = "./dist"
-
-[assets]
-directory = "./dist"
