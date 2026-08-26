@@ -3,6 +3,22 @@ export type Point = {
   y: number
 }
 
+export type Arrow = {
+  id: string
+  start: Point
+  end: Point
+  control?: Point
+  color: string
+  width: number
+}
+
+export type TextAnnotation = {
+  id: string
+  x: number
+  y: number
+  text: string
+}
+
 export type Rect = {
   left: number
   top: number
@@ -90,7 +106,10 @@ export type OptionTarget = {
 export type ToolMode =
   | "none"
   | "select"
+  | "selection"
   | "guides"
   | "text-inspector"
   | "xray"
   | "rulers"
+  | "arrows"
+  | "text"

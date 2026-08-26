@@ -1,7 +1,9 @@
 import type {
   DistanceOverlay,
   Guide,
+  Arrow,
   Measurement,
+  TextAnnotation,
   ToolMode,
 } from "./types"
 import type { ColorPickerFormat } from "./colors"
@@ -71,6 +73,9 @@ export type MesurerStoredWorkspace = {
   guideOrientation: "vertical" | "horizontal"
   guides: Guide[]
   selectedGuideIds: string[]
+  arrows: Arrow[]
+  selectedArrowIds: string[]
+  textAnnotations: TextAnnotation[]
   measurements: Measurement[]
   activeMeasurement: Measurement | null
   heldDistances: DistanceOverlay[]
@@ -112,6 +117,9 @@ type StoredRecord = {
   guideOrientation?: "vertical" | "horizontal"
   guides?: Guide[]
   selectedGuideIds?: string[]
+  arrows?: Arrow[]
+  selectedArrowIds?: string[]
+  textAnnotations?: TextAnnotation[]
   measurements?: Measurement[]
   activeMeasurement?: Measurement | null
   heldDistances?: DistanceOverlay[]
@@ -189,6 +197,37 @@ const isGuide = (value: unknown): value is Guide => {
   )
 }
 
+const isArrow = (value: unknown): value is Arrow => {
+  if (!value || typeof value !== "object") return false
+  const arrow = value as Record<string, unknown>
+  const start = arrow.start as Record<string, unknown> | undefined
+  const end = arrow.end as Record<string, unknown> | undefined
+  const control = arrow.control as Record<string, unknown> | undefined
+  return (
+    typeof arrow.id === "string" &&
+    isFiniteNumber(start?.x) &&
+    isFiniteNumber(start?.y) &&
+    isFiniteNumber(end?.x) &&
+    isFiniteNumber(end?.y) &&
+    (control === undefined || (isFiniteNumber(control.x) && isFiniteNumber(control.y))) &&
+    typeof arrow.color === "string" &&
+    isFiniteNumber(arrow.width) &&
+    arrow.width > 0
+  )
+}
+
+const isTextAnnotation = (value: unknown): value is TextAnnotation => {
+  if (!value || typeof value !== "object") return false
+  const annotation = value as Record<string, unknown>
+  return (
+    typeof annotation.id === "string" &&
+    isFiniteNumber(annotation.x) &&
+    isFiniteNumber(annotation.y) &&
+    typeof annotation.text === "string" &&
+    annotation.text.length > 0
+  )
+}
+
 const isDistanceOverlay = (value: unknown): value is DistanceOverlay => {
   if (!value || typeof value !== "object") return false
   const distance = value as Record<string, unknown>
@@ -253,7 +292,7 @@ export const normalizeStoredWorkspace = (value: unknown): MesurerStoredWorkspace
   const input = value as Record<string, unknown>
   if (
     typeof input.enabled !== "boolean" ||
-    (input.toolMode !== "none" && input.toolMode !== "select" && input.toolMode !== "guides" && input.toolMode !== "text-inspector" && input.toolMode !== "xray" && input.toolMode !== "rulers") ||
+    (input.toolMode !== "none" && input.toolMode !== "select" && input.toolMode !== "selection" && input.toolMode !== "guides" && input.toolMode !== "text-inspector" && input.toolMode !== "xray" && input.toolMode !== "rulers" && input.toolMode !== "arrows" && input.toolMode !== "text") ||
     typeof input.rulersVisible !== "boolean" ||
     (input.guideOrientation !== "vertical" && input.guideOrientation !== "horizontal") ||
     !Array.isArray(input.guides) ||
@@ -269,6 +308,13 @@ export const normalizeStoredWorkspace = (value: unknown): MesurerStoredWorkspace
     guideOrientation: input.guideOrientation,
     guides: input.guides.filter(isGuide),
     selectedGuideIds: input.selectedGuideIds.filter((id): id is string => typeof id === "string"),
+    arrows: Array.isArray(input.arrows) ? input.arrows.filter(isArrow) : [],
+    selectedArrowIds: Array.isArray(input.selectedArrowIds)
+      ? input.selectedArrowIds.filter((id): id is string => typeof id === "string")
+      : [],
+    textAnnotations: Array.isArray(input.textAnnotations)
+      ? input.textAnnotations.filter(isTextAnnotation)
+      : [],
     measurements: input.measurements.filter(isMeasurement),
     activeMeasurement: isMeasurement(input.activeMeasurement) ? input.activeMeasurement : null,
     heldDistances: input.heldDistances.filter(isDistanceOverlay),
@@ -313,6 +359,9 @@ const migrate = (record: StoredRecord): MesurerPersistenceSnapshot | null => {
             guideOrientation: record.guideOrientation,
             guides: record.guides,
             selectedGuideIds: record.selectedGuideIds,
+            arrows: [],
+             selectedArrowIds: [],
+             textAnnotations: [],
             measurements: record.measurements,
             activeMeasurement: record.activeMeasurement,
             heldDistances: record.heldDistances,

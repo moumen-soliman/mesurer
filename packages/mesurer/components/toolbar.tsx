@@ -18,6 +18,8 @@ import { ScreenshotPreview } from "./screenshot-preview";
 import { Tooltip } from "./tooltip";
 import {
   CaretDownIcon,
+  ArrowIcon,
+  BoxSelectIcon,
   CheckIcon,
   CameraIcon,
   ColorPickerIcon,
@@ -27,6 +29,7 @@ import {
   RulerIcon,
   RulersIcon,
   TextInspectorIcon,
+  TextIcon,
   XrayIcon,
 } from "./icons";
 
@@ -235,6 +238,14 @@ function ToolbarComponent(
     onInteract();
   }, [onCancelScreenshot, onInteract, setColorPickerActive, setEnabled, setToolMode]);
 
+  const selectionMode = useCallback(() => {
+    setEnabled(true)
+    setColorPickerActive(false)
+    onCancelScreenshot()
+    setToolMode((prev) => (prev === "selection" ? "none" : "selection"))
+    onInteract()
+  }, [onCancelScreenshot, onInteract, setColorPickerActive, setEnabled, setToolMode])
+
   const guidesMode = useCallback(() => {
     setEnabled(true);
     setColorPickerActive(false);
@@ -243,6 +254,14 @@ function ToolbarComponent(
     onInteract();
   }, [onCancelScreenshot, onInteract, setColorPickerActive, setEnabled, setToolMode]);
 
+  const arrowsMode = useCallback(() => {
+    setEnabled(true)
+    setColorPickerActive(false)
+    onCancelScreenshot()
+    setToolMode((prev) => (prev === "arrows" ? "none" : "arrows"))
+    onInteract()
+  }, [onCancelScreenshot, onInteract, setColorPickerActive, setEnabled, setToolMode])
+
   const textInspectorMode = useCallback(() => {
     setEnabled(true);
     setColorPickerActive(false);
@@ -250,6 +269,14 @@ function ToolbarComponent(
     setToolMode((prev) =>
       prev === "text-inspector" ? "none" : "text-inspector",
     );
+    onInteract();
+  }, [onCancelScreenshot, onInteract, setColorPickerActive, setEnabled, setToolMode]);
+
+  const textMode = useCallback(() => {
+    setEnabled(true);
+    setColorPickerActive(false);
+    onCancelScreenshot();
+    setToolMode((prev) => (prev === "text" ? "none" : "text"));
     onInteract();
   }, [onCancelScreenshot, onInteract, setColorPickerActive, setEnabled, setToolMode]);
 
@@ -372,6 +399,20 @@ function ToolbarComponent(
         shortcut="S"
         onClick={selectMode}
         tooltipVisible={tooltipsEnabled && visibleTooltipId === "select"}
+        tooltipInstant={tooltipInstant}
+        tooltipSide={tooltipSide}
+        onTooltipEnter={onTooltipEnter}
+        onTooltipLeave={onTooltipLeave}
+      >
+        <BoxSelectIcon size={20} />
+      </ToolbarButton>
+      <ToolbarButton
+        id="selection"
+        active={toolMode === "selection"}
+        label="Selection"
+        shortcut="O"
+        onClick={selectionMode}
+        tooltipVisible={tooltipsEnabled && visibleTooltipId === "selection"}
         tooltipInstant={tooltipInstant}
         tooltipSide={tooltipSide}
         onTooltipEnter={onTooltipEnter}
@@ -558,6 +599,34 @@ function ToolbarComponent(
           </div>
         ) : null}
       </div>
+      <ToolbarButton
+        id="arrows"
+        active={toolMode === "arrows"}
+        label="Arrows"
+        shortcut="D"
+        onClick={arrowsMode}
+        tooltipVisible={tooltipsEnabled && visibleTooltipId === "arrows"}
+        tooltipInstant={tooltipInstant}
+        tooltipSide={tooltipSide}
+        onTooltipEnter={onTooltipEnter}
+        onTooltipLeave={onTooltipLeave}
+      >
+        <ArrowIcon size={20} aria-hidden="true" />
+      </ToolbarButton>
+      <ToolbarButton
+        id="text"
+        active={toolMode === "text"}
+        label="Text"
+        shortcut="T"
+        onClick={textMode}
+        tooltipVisible={tooltipsEnabled && visibleTooltipId === "text"}
+        tooltipInstant={tooltipInstant}
+        tooltipSide={tooltipSide}
+        onTooltipEnter={onTooltipEnter}
+        onTooltipLeave={onTooltipLeave}
+      >
+        <TextIcon size={20} aria-hidden="true" />
+      </ToolbarButton>
       <ToolbarButton
         id="text-inspector"
         active={toolMode === "text-inspector"}

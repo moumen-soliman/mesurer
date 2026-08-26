@@ -4,10 +4,11 @@ import type { ToolMode } from "../core/types"
 
 type HotkeyOptions = {
   eventTarget: Window
-  clearAll: () => void
+  cancelInteraction: () => void
   undo: () => void
   redo: () => void
   removeSelectedGuides: () => boolean
+  removeSelectedArrows: () => boolean
   setEnabled: Dispatch<SetStateAction<boolean>>
   setToolMode: Dispatch<SetStateAction<ToolMode>>
   setRulersVisible: Dispatch<SetStateAction<boolean>>
@@ -34,6 +35,28 @@ export const useHotkeys = (options: HotkeyOptions) => {
     const target = options.eventTarget
     const handleKeyDown = (event: KeyboardEvent) => {
       const current = optionsRef.current
+      const target = event.target as HTMLElement | null
+      const path = event.composedPath()
+      const isEditable = path.some((item) => {
+        const element = item as HTMLElement | null
+        return Boolean(
+          element &&
+          (element.isContentEditable ||
+            element.tagName === "INPUT" ||
+            element.tagName === "TEXTAREA" ||
+            element.tagName === "SELECT"),
+        )
+      })
+      if (
+        (target &&
+          (target.isContentEditable ||
+            target.tagName === "INPUT" ||
+            target.tagName === "TEXTAREA" ||
+            target.tagName === "SELECT")) ||
+        isEditable
+      ) {
+        return
+      }
       if (event.key === "Escape") {
         if (current.isSettingsOpen()) {
           current.onToggleSettings()
@@ -47,7 +70,8 @@ export const useHotkeys = (options: HotkeyOptions) => {
           current.onCloseColorPicker()
           return
         }
-        current.clearAll()
+        event.preventDefault()
+        current.cancelInteraction()
         return
       }
 
@@ -112,9 +136,27 @@ export const useHotkeys = (options: HotkeyOptions) => {
           current.onInteract()
         }
 
+        if (key === "o") {
+          current.onCloseScreenshot()
+          current.setToolMode((prev) => (prev === "selection" ? "none" : "selection"))
+          current.onInteract()
+        }
+
         if (key === "g") {
           current.onCloseScreenshot()
           current.setToolMode((prev) => (prev === "guides" ? "none" : "guides"))
+          current.onInteract()
+        }
+
+        if (key === "d") {
+          current.onCloseScreenshot()
+          current.setToolMode((prev) => (prev === "arrows" ? "none" : "arrows"))
+          current.onInteract()
+        }
+
+        if (key === "t") {
+          current.onCloseScreenshot()
+          current.setToolMode((prev) => (prev === "text" ? "none" : "text"))
           current.onInteract()
         }
 
@@ -140,7 +182,7 @@ export const useHotkeys = (options: HotkeyOptions) => {
       }
 
       if (event.key === "Backspace" || event.key === "Delete") {
-        const removed = current.removeSelectedGuides()
+        const removed = current.removeSelectedGuides() || current.removeSelectedArrows()
         if (removed) {
           event.preventDefault()
         }
