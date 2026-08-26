@@ -2,12 +2,10 @@
 
 import {
   useCallback,
-  useEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
-import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from "react";
 import { ensureMesurerStyles } from "./runtime/style-inject";
 import { MESURER_STYLES } from "./styles.generated";
 import { SettingsPanel } from "./components/settings-panel";
@@ -30,9 +28,7 @@ import { useScreenshot } from "./hooks/use-screenshot";
 import { useSelectionAnimationCleanup } from "./hooks/use-selection-animation-cleanup";
 import { useTextInspector } from "./hooks/use-text-inspector";
 import { useXray } from "./hooks/use-xray";
-import { useArrowsPointer } from "./hooks/use-arrows-pointer";
 import { createPersistedSetter } from "./core/persisted-setter";
-import { createId } from "./core/utils";
 import type { ColorPickerFormat } from "./core/colors";
 import {
   createLocalStoragePersistence,
@@ -148,7 +144,6 @@ function MesurerClient({
   const persistedSettings = sanitizeStoredSettings(ownerWindow, storedState?.settings ?? {});
 
   const closeScreenshotRef = useRef<() => void>(() => {});
-  const cancelArrowInteractionRef = useRef<() => void>(() => {});
   const workspacePersistTimeoutRef = useRef<number | null>(null);
   const applyingExternalPersistenceRef = useRef(false);
   const workspace = useMesurerWorkspaceState({
@@ -160,7 +155,6 @@ function MesurerClient({
       persistedSettings.selectNewGuideEnabled ?? selectNewGuideEnabledDefault,
     multiMeasureEnabledDefault:
       persistedSettings.multiMeasureEnabled ?? multiMeasureEnabledDefault,
-    initialTextAnnotations: persistedState?.textAnnotations,
   });
   const {
     selectionRectRef,
@@ -174,9 +168,6 @@ function MesurerClient({
     heldDistancesRef,
     guidesRef,
     selectedGuideIdsRef,
-    arrowsRef,
-    selectedArrowIdsRef,
-    textAnnotationsRef,
     overlayRef,
     selectedElementRef,
     hoverElementRef,
@@ -231,24 +222,6 @@ function MesurerClient({
     setDraggingGuideId,
     selectedGuideIds,
     setSelectedGuideIds,
-    arrows,
-    setArrows,
-    selectedArrowIds,
-    setSelectedArrowIds,
-    textAnnotations,
-    setTextAnnotations,
-    textDraft,
-    setTextDraft,
-    textDraftValue,
-    setTextDraftValue,
-    selectedTextIds,
-    setSelectedTextIds,
-    arrowStart,
-    setArrowStart,
-    arrowMiddle,
-    setArrowMiddle,
-    arrowPreviewEnd,
-    setArrowPreviewEnd,
     toolbarActive,
     setToolbarActive,
     settingsOpen,
@@ -259,7 +232,6 @@ function MesurerClient({
     setGuideOrientation,
   } = workspace;
   const textInspector = useTextInspector(portalTarget, toolMode);
-  const textDraftInputRef = useRef<HTMLTextAreaElement>(null);
   const {
     highlightColor: settingsHighlightColor,
     setHighlightColor: setSettingsHighlightColor,
@@ -318,23 +290,6 @@ function MesurerClient({
     orientation: "vertical" | "horizontal";
     position: number;
   } | null>(null);
-  const [scrollOffset, setScrollOffset] = useState({
-    x: ownerWindow.scrollX,
-    y: ownerWindow.scrollY,
-  });
-
-  useEffect(() => {
-    const updateScrollOffset = () => {
-      setScrollOffset({ x: ownerWindow.scrollX, y: ownerWindow.scrollY });
-    };
-    updateScrollOffset();
-    ownerWindow.addEventListener("scroll", updateScrollOffset, true);
-    ownerWindow.addEventListener("resize", updateScrollOffset);
-    return () => {
-      ownerWindow.removeEventListener("scroll", updateScrollOffset, true);
-      ownerWindow.removeEventListener("resize", updateScrollOffset);
-    };
-  }, [ownerWindow]);
 
   enabledRef.current = enabled;
   xrayVisibleRef.current = xrayVisible;
@@ -346,9 +301,6 @@ function MesurerClient({
   heldDistancesRef.current = heldDistances;
   guidesRef.current = guides;
   selectedGuideIdsRef.current = selectedGuideIds;
-  arrowsRef.current = arrows;
-  selectedArrowIdsRef.current = selectedArrowIds;
-  textAnnotationsRef.current = textAnnotations;
 
   const saveWorkspace = useCallback(() => {
     if (!settingsPersistOnReload) return;
@@ -360,9 +312,6 @@ function MesurerClient({
       guideOrientation: guideOrientationRef.current,
       guides: guidesRef.current,
       selectedGuideIds: selectedGuideIdsRef.current,
-      arrows: arrowsRef.current,
-      selectedArrowIds: selectedArrowIdsRef.current,
-      textAnnotations: textAnnotationsRef.current,
       measurements: measurementsRef.current.map(stripMeasurement),
       activeMeasurement: activeMeasurementRef.current
         ? stripMeasurement(activeMeasurementRef.current)
@@ -393,9 +342,6 @@ function MesurerClient({
     heldDistancesRef.current = [];
     guidesRef.current = [];
     selectedGuideIdsRef.current = [];
-    arrowsRef.current = [];
-    selectedArrowIdsRef.current = [];
-    textAnnotationsRef.current = [];
     closeScreenshotRef.current();
     setEnabled(false);
     setToolMode("none");
@@ -409,10 +355,7 @@ function MesurerClient({
     setHeldDistances([]);
     setGuides([]);
     setSelectedGuideIds([]);
-    setArrows([]);
-    setSelectedArrowIds([]);
-    setTextAnnotations([]);
-  }, [setActiveMeasurement, setArrows, setEnabled, setGuideOrientation, setGuides, setHeldDistances, setMeasurements, setRulersVisible, setSelectedArrowIds, setSelectedGuideIds, setSelectedMeasurement, setSelectedMeasurements, setTextAnnotations, setToolMode]);
+  }, [setActiveMeasurement, setEnabled, setGuideOrientation, setGuides, setHeldDistances, setMeasurements, setRulersVisible, setSelectedGuideIds, setSelectedMeasurement, setSelectedMeasurements, setToolMode]);
 
   const clearWorkspace = useCallback(() => {
     clearPersistedWorkspace();
@@ -430,9 +373,6 @@ function MesurerClient({
     heldDistancesRef.current = workspace.heldDistances;
     guidesRef.current = workspace.guides;
     selectedGuideIdsRef.current = workspace.selectedGuideIds;
-    arrowsRef.current = workspace.arrows;
-    selectedArrowIdsRef.current = workspace.selectedArrowIds;
-    textAnnotationsRef.current = workspace.textAnnotations;
     if (!workspace.enabled) closeScreenshotRef.current();
     setEnabled(workspace.enabled);
     setToolMode(workspace.toolMode);
@@ -443,11 +383,8 @@ function MesurerClient({
     setActiveMeasurement(workspace.activeMeasurement);
     setGuides(workspace.guides);
     setSelectedGuideIds(workspace.selectedGuideIds);
-    setArrows(workspace.arrows);
-    setSelectedArrowIds(workspace.selectedArrowIds);
-    setTextAnnotations(workspace.textAnnotations);
     setHeldDistances(workspace.heldDistances);
-  }, [setActiveMeasurement, setArrows, setEnabled, setGuideOrientation, setGuides, setHeldDistances, setMeasurements, setRulersVisible, setSelectedArrowIds, setSelectedGuideIds, setTextAnnotations, setToolMode]);
+  }, [setActiveMeasurement, setEnabled, setGuideOrientation, setGuides, setHeldDistances, setMeasurements, setRulersVisible, setSelectedGuideIds, setToolMode]);
 
   const applyPersistenceSnapshot = useCallback((
     snapshot: MesurerPersistenceSnapshot | null,
@@ -541,21 +478,6 @@ function MesurerClient({
     [persistState, setSelectedGuideIds],
   );
 
-  const setArrowsPersisted = useCallback(
-    createPersistedSetter(arrowsRef, setArrows, persistState),
-    [persistState, setArrows],
-  );
-
-  const setSelectedArrowIdsPersisted = useCallback(
-    createPersistedSetter(selectedArrowIdsRef, setSelectedArrowIds, persistState),
-    [persistState, setSelectedArrowIds],
-  );
-
-  const setTextAnnotationsPersisted = useCallback(
-    createPersistedSetter(textAnnotationsRef, setTextAnnotations, persistState),
-    [persistState, setTextAnnotations],
-  );
-
   const {
     recordSnapshot,
     createActionCommit,
@@ -592,16 +514,6 @@ function MesurerClient({
       setSelectedGuideIds: setSelectedGuideIdsPersisted,
       draggingGuideId,
       setDraggingGuideId,
-    },
-    arrows: {
-      arrows,
-      setArrows: setArrowsPersisted,
-      selectedArrowIds,
-      setSelectedArrowIds: setSelectedArrowIdsPersisted,
-    },
-    text: {
-      textAnnotations,
-      setTextAnnotations: setTextAnnotationsPersisted,
     },
     transient: {
       setStart,
@@ -645,9 +557,6 @@ function MesurerClient({
     setGuidesPersisted([]);
     setSelectedGuideIdsPersisted([]);
     setHeldDistancesPersisted([]);
-    setArrowsPersisted([]);
-    setSelectedArrowIdsPersisted([]);
-    setTextAnnotationsPersisted([]);
   }, [
     clearGuideDragHold,
     clearSelectionRect,
@@ -662,34 +571,12 @@ function MesurerClient({
     setMeasurementsPersisted,
     setSelectedElement,
     setSelectedGuideIdsPersisted,
-    setArrowsPersisted,
-    setSelectedArrowIdsPersisted,
-    setTextAnnotationsPersisted,
     setSelectedMeasurement,
     setSelectedMeasurements,
     setStart,
     textInspector,
     toolMode,
   ]);
-
-  const cancelInteraction = useCallback(() => {
-    cancelArrowInteractionRef.current();
-    clearGuideDragHold();
-    setStart(null);
-    setEnd(null);
-    setIsDragging(false);
-    clearSelectionRect();
-    setHoverRect(null);
-    setHoverElement(null);
-    setSelectedElement(null);
-    setArrowStart(null);
-    setArrowMiddle(null);
-    setArrowPreviewEnd(null);
-    setTextDraft(null);
-    setTextDraftValue("");
-    setSelectedArrowIdsPersisted([]);
-    setToolModePersisted("selection");
-  }, [clearGuideDragHold, clearSelectionRect, setArrowMiddle, setArrowPreviewEnd, setArrowStart, setEnd, setHoverElement, setHoverRect, setIsDragging, setSelectedArrowIdsPersisted, setSelectedElement, setStart, setTextDraft, setTextDraftValue, setToolModePersisted]);
 
   const removeSelectedGuides = useCallback(() => {
     if (selectedGuideIds.length === 0) return false;
@@ -705,16 +592,6 @@ function MesurerClient({
     setGuidesPersisted,
     setSelectedGuideIdsPersisted,
   ]);
-
-  const removeSelectedArrows = useCallback(() => {
-    if (selectedArrowIds.length === 0) return false;
-    recordSnapshot();
-    setArrowsPersisted((previous) =>
-      previous.filter((arrow) => !selectedArrowIds.includes(arrow.id)),
-    );
-    setSelectedArrowIdsPersisted([]);
-    return true;
-  }, [recordSnapshot, selectedArrowIds, setArrowsPersisted, setSelectedArrowIdsPersisted]);
 
   const colorPicker = useColorPicker({
     ownerWindow,
@@ -754,11 +631,10 @@ function MesurerClient({
 
   useHotkeys({
     eventTarget: ownerWindow,
-    cancelInteraction,
+    clearAll,
     undo,
     redo,
     removeSelectedGuides,
-    removeSelectedArrows,
     setEnabled: setEnabledWithHistory,
     setToolMode: setToolModeWithHistory,
     setRulersVisible: setRulersVisiblePersisted,
@@ -952,87 +828,6 @@ function MesurerClient({
     clearSelectionRect,
   });
 
-  const arrowsPointer = useArrowsPointer({
-    enabled,
-    settingsOpen,
-    color: settingsGuideColor,
-    width: Math.max(settingsGuideStyle.width, 1),
-    createActionCommit,
-    setArrows: setArrowsPersisted,
-    setSelectedArrowIds: setSelectedArrowIdsPersisted,
-    setToolMode: setToolModePersisted,
-    arrows,
-    arrowStart,
-    arrowMiddle,
-    arrowPreviewEnd,
-    setArrowStart,
-    setArrowMiddle,
-    setArrowPreviewEnd,
-    scrollOffset,
-  });
-  cancelArrowInteractionRef.current = arrowsPointer.cancelInteraction;
-
-  const finishTextDraft = useCallback((selectAfterCommit = false) => {
-    if (!textDraft) return;
-    const value = textDraftValue.trim();
-    if (value) {
-      recordSnapshot();
-      const id = textDraft.id ?? createId();
-      if (textDraft.id) {
-        setTextAnnotationsPersisted((previous) => previous.map((item) =>
-          item.id === textDraft.id ? { ...item, text: value } : item,
-        ));
-      } else {
-        setTextAnnotationsPersisted((previous) => [
-          ...previous,
-          { id, x: textDraft.x, y: textDraft.y, text: value },
-        ]);
-      }
-      setSelectedTextIds(selectAfterCommit ? [id] : []);
-    }
-    setTextDraft(null);
-    setTextDraftValue("");
-  }, [recordSnapshot, setSelectedTextIds, setTextAnnotationsPersisted, setTextDraft, setTextDraftValue, textDraft, textDraftValue]);
-
-  const selectTextAnnotation = useCallback((id: string) => {
-    setSelectedTextIds([id]);
-  }, [setSelectedTextIds]);
-
-  const moveTextAnnotation = useCallback((id: string, x: number, y: number) => {
-    setTextAnnotationsPersisted((previous) => previous.map((item) =>
-      item.id === id ? { ...item, x, y } : item,
-    ));
-  }, [setTextAnnotationsPersisted]);
-
-  const editTextAnnotation = useCallback((id: string) => {
-    const item = textAnnotations.find((annotation) => annotation.id === id);
-    if (!item) return;
-    setSelectedTextIds([id]);
-    setTextDraft({ id, x: item.x, y: item.y });
-    setTextDraftValue(item.text);
-  }, [setSelectedTextIds, setTextAnnotations, setTextDraft, setTextDraftValue, textAnnotations]);
-
-  const handleTextPointerDown = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
-    if (event.target !== event.currentTarget) return;
-    event.preventDefault();
-    setTextDraft({ x: event.clientX + scrollOffset.x, y: event.clientY + scrollOffset.y });
-    setTextDraftValue("");
-  }, [scrollOffset.x, scrollOffset.y, setTextDraft, setTextDraftValue]);
-
-  const handleTextKeyDown = useCallback((event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
-      event.preventDefault();
-      event.stopPropagation();
-      finishTextDraft();
-    }
-    if (event.key === "Escape") {
-      event.preventDefault();
-      event.stopPropagation();
-      finishTextDraft(true);
-      setToolModePersisted("selection");
-    }
-  }, [finishTextDraft, setToolModePersisted]);
-
   const removeHeldDistance = useCallback(
     (id: string) => {
       recordSnapshot();
@@ -1069,45 +864,6 @@ function MesurerClient({
   });
 
   const overlayInteractive = enabled && !settingsOpen;
-  const pointerHandlers = toolMode === "arrows"
-    ? {
-        onPointerDown: arrowsPointer.handlePointerDown,
-        onPointerMove: arrowsPointer.handlePointerMove,
-        onPointerUp: arrowsPointer.handlePointerUp,
-        onPointerLeave: arrowsPointer.handlePointerLeave,
-        onPointerCancel: arrowsPointer.handlePointerCancel,
-      }
-      : toolMode === "text"
-        ? {
-            onPointerDown: handleTextPointerDown,
-            onPointerMove: handlePointerMove,
-            onPointerUp: handlePointerUp,
-            onPointerLeave: handlePointerLeave,
-            onPointerCancel: handlePointerUp,
-          }
-        : {
-        onPointerDown: toolMode === "selection"
-          ? (event: ReactPointerEvent<HTMLDivElement>) => {
-              if (!arrowsPointer.handleSelectionPointerDown(event)) handlePointerDown(event)
-            }
-          : handlePointerDown,
-        onPointerMove: toolMode === "selection"
-          ? (event: ReactPointerEvent<HTMLDivElement>) => {
-              if (!arrowsPointer.handleSelectionPointerMove(event)) handlePointerMove(event)
-            }
-          : handlePointerMove,
-        onPointerUp: toolMode === "selection"
-          ? (event: ReactPointerEvent<HTMLDivElement>) => {
-              if (!arrowsPointer.handleSelectionPointerUp(event)) handlePointerUp(event)
-            }
-          : handlePointerUp,
-        onPointerLeave: handlePointerLeave,
-        onPointerCancel: toolMode === "selection"
-          ? (event: ReactPointerEvent<HTMLDivElement>) => {
-              if (!arrowsPointer.handleSelectionPointerUp(event)) handlePointerUp(event)
-            }
-          : handlePointerUp,
-      };
 
   return (
     <MesurerPortal
@@ -1137,8 +893,11 @@ function MesurerClient({
         isDragging,
         fillColor,
         outlineColor,
-          pointers: {
-            ...pointerHandlers,
+        pointers: {
+          onPointerDown: handlePointerDown,
+          onPointerMove: handlePointerMove,
+          onPointerUp: handlePointerUp,
+          onPointerLeave: handlePointerLeave,
         },
         selection: {
           measurements: displayedMeasurements,
@@ -1176,27 +935,6 @@ function MesurerClient({
           onPointerDown: handleGuidePointerDown,
           onPointerUp: handleGuidePointerUp,
           onPointerCancel: handleGuidePointerUp,
-        },
-        arrows: {
-          items: arrows,
-          selectedIds: selectedArrowIds,
-          preview: arrowsPointer.preview,
-          scrollOffset,
-        },
-        text: {
-          items: textAnnotations,
-          draft: textDraft,
-          draftValue: textDraftValue,
-          draftInputRef: textDraftInputRef,
-          interactive: toolMode === "selection",
-          onSelect: selectTextAnnotation,
-          onMoveStart: recordSnapshot,
-          onMove: moveTextAnnotation,
-          onEdit: editTextAnnotation,
-          scrollOffset,
-          onDraftChange: setTextDraftValue,
-          onDraftKeyDown: handleTextKeyDown,
-          onDraftBlur: finishTextDraft,
         },
       }}
       colorPicker={{

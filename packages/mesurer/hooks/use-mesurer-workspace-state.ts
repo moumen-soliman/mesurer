@@ -1,14 +1,12 @@
 import { useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
-import type { DistanceOverlay, Guide, Measurement, Rect, TextAnnotation, ToolMode } from "../core/types";
+import type { DistanceOverlay, Guide, Measurement, Rect, ToolMode } from "../core/types";
 import type { MesurerStoredWorkspace } from "../core/persistence";
 import { useDragState } from "./use-drag-state";
 import { useGuideState } from "./use-guide-state";
 import { useMeasureToggles } from "./use-measure-toggles";
 import { useMeasurementState } from "./use-measurement-state";
 import { useMesurerLocalState } from "./use-mesurer-local-state";
-import { useArrowState } from "./use-arrow-state";
-import { useTextAnnotationState } from "./use-text-annotation-state";
 import { useOverlayRefs } from "./use-overlay-refs";
 
 type UseMesurerWorkspaceStateOptions = {
@@ -17,7 +15,6 @@ type UseMesurerWorkspaceStateOptions = {
   snapGuidesEnabledDefault: boolean;
   selectNewGuideEnabledDefault: boolean;
   multiMeasureEnabledDefault: boolean;
-  initialTextAnnotations?: TextAnnotation[];
 };
 
 export const useMesurerWorkspaceState = ({
@@ -26,7 +23,6 @@ export const useMesurerWorkspaceState = ({
   snapGuidesEnabledDefault,
   selectNewGuideEnabledDefault,
   multiMeasureEnabledDefault,
-  initialTextAnnotations,
 }: UseMesurerWorkspaceStateOptions) => {
   const selectionRectRef = useRef<Rect | null>(null);
   const enabledRef = useRef(false);
@@ -49,8 +45,6 @@ export const useMesurerWorkspaceState = ({
   const heldDistancesRef = useRef<DistanceOverlay[]>(persistedState?.heldDistances ?? []);
   const guidesRef = useRef<Guide[]>(persistedState?.guides ?? []);
   const selectedGuideIdsRef = useRef<string[]>(persistedState?.selectedGuideIds ?? []);
-  const arrowsRef = useRef(persistedState?.arrows ?? []);
-  const selectedArrowIdsRef = useRef(persistedState?.selectedArrowIds ?? []);
 
   const { overlayRef, selectedElementRef, hoverElementRef } = useOverlayRefs();
   const localState = useMesurerLocalState({
@@ -79,11 +73,6 @@ export const useMesurerWorkspaceState = ({
     initialGuides: persistedState?.guides ?? [],
     initialSelectedGuideIds: persistedState?.selectedGuideIds ?? [],
   });
-  const arrows = useArrowState({
-    initialArrows: persistedState?.arrows,
-    initialSelectedArrowIds: persistedState?.selectedArrowIds,
-  });
-  const text = useTextAnnotationState(initialTextAnnotations);
   const [toolbarActive, setToolbarActive] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [xrayVisible, setXrayVisible] = useState(xrayVisibleRef.current);
@@ -103,8 +92,6 @@ export const useMesurerWorkspaceState = ({
     heldDistancesRef,
     guidesRef,
     selectedGuideIdsRef,
-    arrowsRef,
-    selectedArrowIdsRef,
     overlayRef,
     selectedElementRef,
     hoverElementRef,
@@ -113,8 +100,6 @@ export const useMesurerWorkspaceState = ({
     ...drag,
     ...measurements,
     ...guides,
-    ...arrows,
-    ...text,
     toolbarActive,
     setToolbarActive,
     settingsOpen,
