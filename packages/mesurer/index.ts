@@ -1,5 +1,5 @@
-export { default as Measurer } from "./measurer";
-export type { MeasurerProps } from "./measurer";
+export { default as Mesurer } from "./mesurer";
+export type { MesurerProps } from "./mesurer";
 export {
   createTextInspector,
   TextInspector,
@@ -27,4 +27,5 @@ export type {
   GuidePattern,
   GuideStyle,
   RulerSettings,
+  ScreenshotSettings,
 } from "./core/persistence";

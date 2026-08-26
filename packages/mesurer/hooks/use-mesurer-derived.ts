@@ -12,7 +12,7 @@ import { getPrimarySelectedMeasurement } from "../core/selection-helpers"
 import type { InspectMeasurement, Point, Rect } from "../core/types"
 import { formatValue } from "../core/utils"
 
-type UseMeasurerDerivedArgs = {
+type UseMesurerDerivedArgs = {
   document: Document
   window: Window
   start: Point | null
@@ -38,11 +38,12 @@ type UseMeasurerDerivedArgs = {
   } | null
   displayedMeasurements: Array<{ rect: Rect }>
   hoverHighlightEnabled: boolean
+  guideHighlightEnabled: boolean
   highlightColor: string
   guideColor: string
 }
 
-export const useMeasurerDerived = ({
+export const useMesurerDerived = ({
   document,
   window,
   start,
@@ -61,9 +62,10 @@ export const useMeasurerDerived = ({
   guidePreview,
   displayedMeasurements,
   hoverHighlightEnabled,
+  guideHighlightEnabled,
   highlightColor,
   guideColor,
-}: UseMeasurerDerivedArgs) => {
+}: UseMesurerDerivedArgs) => {
   const activeRect = useMemo(() => {
     if (!start || !end) return null
     return {
@@ -245,16 +247,18 @@ export const useMeasurerDerived = ({
     guideColorHover,
     guideColorDefault,
     guideColorPreview,
+    guidePreviewEmphasized,
   } = useMemo(
     () => ({
       outlineColor: `color-mix(in oklch, ${highlightColor} 80%, transparent)`,
       fillColor: `color-mix(in oklch, ${highlightColor} 8%, transparent)`,
       guideColorActive: `color-mix(in oklch, ${guideColor} 100%, transparent)`,
-      guideColorHover: `color-mix(in oklch, ${guideColor} 90%, transparent)`,
+      guideColorHover: `color-mix(in oklch, ${guideColor} ${guideHighlightEnabled ? 90 : 70}%, transparent)`,
       guideColorDefault: `color-mix(in oklch, ${guideColor} 70%, transparent)`,
-      guideColorPreview: `color-mix(in oklch, ${guideColor} 50%, transparent)`,
+      guideColorPreview: `color-mix(in oklch, ${guideColor} ${guideHighlightEnabled ? 50 : 70}%, transparent)`,
+      guidePreviewEmphasized: guideHighlightEnabled,
     }),
-    [guideColor, highlightColor]
+    [guideColor, guideHighlightEnabled, highlightColor]
   )
 
   const selectedRects = useMemo(
@@ -302,6 +306,7 @@ export const useMeasurerDerived = ({
     guideColorHover,
     guideColorDefault,
     guideColorPreview,
+    guidePreviewEmphasized,
     hoverRectToShow,
     selectedEdgeVisibility,
     hoverEdgeVisibility,

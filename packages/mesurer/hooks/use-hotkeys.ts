@@ -16,6 +16,9 @@ type HotkeyOptions = {
   setGuideOrientation: Dispatch<SetStateAction<"vertical" | "horizontal">>
   onInteract: () => void
   onColorPicker: () => void
+  onScreenshot: () => void
+  onCloseScreenshot: () => void
+  isScreenshotActive: () => boolean
   onToggleXray: () => void
   onToggleSettings: () => void
   isSettingsOpen: () => boolean
@@ -36,6 +39,10 @@ export const useHotkeys = (options: HotkeyOptions) => {
           current.onToggleSettings()
           return
         }
+        if (current.isScreenshotActive()) {
+          current.onCloseScreenshot()
+          return
+        }
         if (current.isColorPickerActive()) {
           current.onCloseColorPicker()
           return
@@ -47,6 +54,7 @@ export const useHotkeys = (options: HotkeyOptions) => {
       if (event.metaKey || event.ctrlKey) {
         if (event.key === ",") {
           event.preventDefault()
+          current.onCloseScreenshot()
           current.onToggleSettings()
           current.onInteract()
           return
@@ -69,12 +77,21 @@ export const useHotkeys = (options: HotkeyOptions) => {
       const key = event.key.toLowerCase()
       if (key === "p") {
         event.preventDefault()
+        current.onCloseScreenshot()
         current.onColorPicker()
         current.onInteract()
         return
       }
 
+      if (key === "c") {
+        event.preventDefault()
+        current.onScreenshot()
+        current.onInteract()
+        return
+      }
+
       if (key === "x") {
+        current.onCloseScreenshot()
         current.onToggleXray()
         current.onInteract()
         return
@@ -82,6 +99,7 @@ export const useHotkeys = (options: HotkeyOptions) => {
 
       if (current.isOverlayActive()) {
         if (key === "a") {
+          current.onCloseScreenshot()
           current.setToolMode((prev) =>
             prev === "text-inspector" ? "none" : "text-inspector",
           )
@@ -89,16 +107,19 @@ export const useHotkeys = (options: HotkeyOptions) => {
         }
 
         if (key === "s") {
+          current.onCloseScreenshot()
           current.setToolMode((prev) => (prev === "select" ? "none" : "select"))
           current.onInteract()
         }
 
         if (key === "g") {
+          current.onCloseScreenshot()
           current.setToolMode((prev) => (prev === "guides" ? "none" : "guides"))
           current.onInteract()
         }
 
         if (key === "r") {
+          current.onCloseScreenshot()
           current.setRulersVisible((prev) => !prev)
           current.onInteract()
         }

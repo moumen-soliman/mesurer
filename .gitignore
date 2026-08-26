@@ -14,5 +14,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 packages/mesurer/styles.generated.css
+packages/mesurer/styles.generated.ts
 *.tsbuildinfo
 *.tgz
+*.zip

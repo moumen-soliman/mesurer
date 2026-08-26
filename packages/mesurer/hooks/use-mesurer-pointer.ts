@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react"
+import { useCallback, useRef } from "react"
 import type {
   MutableRefObject,
   PointerEvent as ReactPointerEvent,
@@ -29,7 +29,7 @@ type GuidePreview = {
   position: number
 }
 
-type UseMeasurerPointerArgs = {
+type UseMesurerPointerArgs = {
   document: Document
   window: Window
   toolbarRef: MutableRefObject<HTMLDivElement | null>
@@ -83,7 +83,7 @@ type UseMeasurerPointerArgs = {
   clearSelectionRect: () => void
 }
 
-export const useMeasurerPointer = ({
+export const useMesurerPointer = ({
   document,
   window,
   toolbarRef,
@@ -130,7 +130,7 @@ export const useMeasurerPointer = ({
   setHoverElement,
   setHoverPointer,
   clearSelectionRect,
-}: UseMeasurerPointerArgs) => {
+}: UseMesurerPointerArgs) => {
   const hoverFrameRef = useRef<number | null>(null)
   const hoverPointRef = useRef<Point | null>(null)
   const selectionCacheRef = useRef({
@@ -141,14 +141,6 @@ export const useMeasurerPointer = ({
   })
   const shiftDragRef = useRef(false)
   const shiftToggleElementRef = useRef<HTMLElement | null>(null)
-
-  useEffect(() => {
-    return () => {
-      if (hoverFrameRef.current) {
-         window.cancelAnimationFrame(hoverFrameRef.current)
-      }
-    }
-  }, [])
 
   const updateHoverTarget = useCallback(
     (point: Point) => {
@@ -283,6 +275,33 @@ export const useMeasurerPointer = ({
       if (toolbarNode && toolbarNode.contains(event.target as Node)) return
       if (settingsOpen) return
       if (!enabled) return
+      const point = { x: event.clientX, y: event.clientY }
+      if (event.altKey !== altPressed) {
+        setAltPressed(event.altKey)
+      }
+
+      if (draggingGuideId) {
+        setGuides((prev) =>
+          prev.map((guide) =>
+            guide.id === draggingGuideId
+              ? {
+                  ...guide,
+                  position: getSnapGuidePosition({
+                    orientation: guide.orientation,
+                    point,
+                    snapGuidesEnabled,
+                    overlayNode: overlayRef.current,
+                    guides,
+                    draggingGuideId,
+                    document,
+                  }),
+                }
+              : guide
+          )
+        )
+        return
+      }
+
       if (toolMode === "none") {
         if (hoverHighlightEnabled) {
           setHoverRect(null)
@@ -291,11 +310,6 @@ export const useMeasurerPointer = ({
         setHoverPointer(null)
         setGuidePreview(null)
         return
-      }
-
-      const point = { x: event.clientX, y: event.clientY }
-      if (event.altKey !== altPressed) {
-        setAltPressed(event.altKey)
       }
 
       hoverPointRef.current = point
@@ -325,8 +339,8 @@ export const useMeasurerPointer = ({
               snapGuidesEnabled,
               overlayNode: overlayRef.current,
               guides,
-          draggingGuideId,
-          document,
+              draggingGuideId,
+              document,
             })
             setGuidePreview({
               orientation: guideOrientation,
@@ -337,27 +351,6 @@ export const useMeasurerPointer = ({
           }
           hoverFrameRef.current = null
         })
-      }
-
-      if (draggingGuideId) {
-        setGuides((prev) =>
-          prev.map((guide) =>
-            guide.id === draggingGuideId
-              ? {
-                  ...guide,
-                  position: getSnapGuidePosition({
-                    orientation: guide.orientation,
-                    point,
-                    snapGuidesEnabled,
-                    overlayNode: overlayRef.current,
-                    guides,
-                    draggingGuideId,
-                    document,
-                  }),
-                }
-              : guide
-          )
-        )
       }
 
       if (guidesEnabled) return
@@ -411,6 +404,10 @@ export const useMeasurerPointer = ({
       if (!enabled) return
       clearGuideDragHold()
       if (guidesEnabled) {
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+          event.currentTarget.releasePointerCapture(event.pointerId)
+        }
+        setDraggingGuideId(null)
         setStart(null)
         setEnd(null)
         setIsDragging(false)
@@ -646,6 +643,10 @@ export const useMeasurerPointer = ({
   )
 
   const handlePointerLeave = useCallback(() => {
+    if (hoverFrameRef.current) {
+      window.cancelAnimationFrame(hoverFrameRef.current)
+      hoverFrameRef.current = null
+    }
     clearGuideDragHold()
     setStart(null)
     setEnd(null)

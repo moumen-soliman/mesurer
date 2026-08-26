@@ -29,7 +29,7 @@ const adoptSheet = (styleTarget: ShadowRoot, cssText: string) => {
   styleTarget.adoptedStyleSheets = [...styleTarget.adoptedStyleSheets, sheet];
 };
 
-export function ensureMeasurerStyles(
+export function ensureMesurerStyles(
   cssText: string,
   target?: HTMLElement | ShadowRoot,
 ) {

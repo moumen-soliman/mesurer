@@ -10,7 +10,7 @@ import type {
 
 type GuideOrientation = "vertical" | "horizontal"
 
-type MeasurerSnapshot = {
+type MesurerSnapshot = {
   enabled: boolean
   toolMode: ToolMode
   guideOrientation: GuideOrientation
@@ -24,7 +24,7 @@ type MeasurerSnapshot = {
   draggingGuideId: string | null
 }
 
-type UseMeasurerHistoryArgs = {
+type UseMesurerHistoryArgs = {
   toggles: {
     enabled: boolean
     setEnabled: (value: SetStateAction<boolean>) => void
@@ -83,12 +83,12 @@ type UseMeasurerHistoryArgs = {
 
 const HISTORY_LIMIT = 50
 
-export const useMeasurerHistory = ({
+export const useMesurerHistory = ({
   toggles,
   measurements,
   guides,
   transient,
-}: UseMeasurerHistoryArgs) => {
+}: UseMesurerHistoryArgs) => {
   const {
     enabled,
     setEnabled,
@@ -128,11 +128,11 @@ export const useMeasurerHistory = ({
     clearSelectionRect,
   } = transient
 
-  const historyRef = useRef<MeasurerSnapshot[]>([])
-  const futureRef = useRef<MeasurerSnapshot[]>([])
+  const historyRef = useRef<MesurerSnapshot[]>([])
+  const futureRef = useRef<MesurerSnapshot[]>([])
   const historySignatureRef = useRef<string | null>(null)
 
-  const captureSnapshot = useCallback((): MeasurerSnapshot => {
+  const captureSnapshot = useCallback((): MesurerSnapshot => {
     return {
       enabled,
       toolMode,
@@ -160,7 +160,7 @@ export const useMeasurerHistory = ({
     toolMode,
   ])
 
-  const getSnapshotSignature = useCallback((snapshot: MeasurerSnapshot) => {
+  const getSnapshotSignature = useCallback((snapshot: MesurerSnapshot) => {
     const serializeRect = (rect: {
       left: number
       top: number
@@ -204,7 +204,7 @@ export const useMeasurerHistory = ({
   }, [captureSnapshot, getSnapshotSignature])
 
   const restoreSnapshot = useCallback(
-    (snapshot: MeasurerSnapshot) => {
+    (snapshot: MesurerSnapshot) => {
       setEnabled(snapshot.enabled)
       setToolMode(snapshot.toolMode)
       setGuideOrientation(snapshot.guideOrientation)

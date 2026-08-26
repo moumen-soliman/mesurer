@@ -27,6 +27,25 @@ Used only when the user explicitly activates the extension, to run Mesurer on th
 
 Used to inject the extension script into the active page to render measurement overlays and guides.
 
+### storage
+
+Used to store Mesurer settings and page workspaces locally in Chrome. This data stays in the
+browser and is not sent to Mesurer servers.
+
+### clipboardWrite
+
+Used when the user chooses to copy a selected screenshot or sampled color to the clipboard.
+
+## Screenshot Capture
+
+Screenshot captures are initiated by the user and contain only the selected region of the
+currently visible tab. In the Chrome extension, capture is performed locally through Chrome's
+visible-tab capture API. In a React integration without the extension, Chrome may show its native
+tab-sharing prompt through `getDisplayMedia()`.
+
+Screenshots are copied to the local clipboard or downloaded locally according to the user's
+settings. Mesurer does not upload or externally process screenshots.
+
 ## Remote Code
 
 Mesurer does not use remote code.

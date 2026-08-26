@@ -2,17 +2,17 @@ import { useCallback, useState } from "react"
 import type { MutableRefObject } from "react"
 import type { Point, Rect } from "../core/types"
 
-type UseMeasurerLocalStateArgs = {
+type UseMesurerLocalStateArgs = {
   selectedElementRef: MutableRefObject<HTMLElement | null>
   hoverElementRef: MutableRefObject<HTMLElement | null>
   selectionRectRef: MutableRefObject<Rect | null>
 }
 
-export const useMeasurerLocalState = ({
+export const useMesurerLocalState = ({
   selectedElementRef,
   hoverElementRef,
   selectionRectRef,
-}: UseMeasurerLocalStateArgs) => {
+}: UseMesurerLocalStateArgs) => {
   const [selectionOriginRect, setSelectionOriginRect] = useState<Rect | null>(
     null
   )

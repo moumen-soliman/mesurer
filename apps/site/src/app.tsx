@@ -1,7 +1,8 @@
-import { Measurer } from "mesurer";
+import { Mesurer } from "mesurer";
 import {
   ArrowsCounterClockwiseIcon,
   CalculatorIcon,
+  CameraIcon,
   CursorIcon,
   GridFourIcon,
   GearIcon,
@@ -33,8 +34,8 @@ function Header({
 }) {
   return (
     <div className="flex flex-col gap-4">
-      {linkToHome ? (
-        <a href="/" className="w-fit">
+        {linkToHome ? (
+          <a href="/" className="w-fit">
           <img
             src="/logo.webp"
             alt="Mesurer"
@@ -90,7 +91,9 @@ function Header({
       </div>
       {showDescription && (
         <p className="max-w-xl leading-relaxed text-muted">
-          Measure and align everything on localhost.
+          Visual precision for building with coding agents.
+          <br />
+          Measure, inspect, and capture exactly what you see in the browser.
         </p>
       )}
     </div>
@@ -140,6 +143,11 @@ function HomeContent() {
       description: "Sample colors and copy values in your chosen format",
     },
     {
+      icon: <CameraIcon size={16} weight="light" />,
+      title: "Screenshot",
+      description: "Capture a visible-tab region to copy or download",
+    },
+    {
       icon: <TextAaIcon size={16} weight="light" />,
       title: "Text inspector",
       description: "Inspect typography styles on any element",
@@ -184,7 +192,7 @@ function HomeContent() {
               Chrome extension
             </p>
             <p className="mt-1 text-[15px] font-normal text-muted">
-              Best for fast and easy inspection of any page on the web.
+              Inspect and capture any interface directly in your browser.
             </p>
             <a
               href="https://chromewebstore.google.com/detail/mesurer/icmjafcffhpcnadkmmklegommbcekcac"
@@ -192,7 +200,7 @@ function HomeContent() {
               rel="noreferrer"
               className="mt-3 inline-flex text-[15px] font-medium text-muted transition-colors hover:text-strong"
             >
-              Add to chrome
+              Add to Chrome
             </a>
           </div>
           <div className="rounded-[2px] border border-[#EDEDED] bg-gradient-to-b from-[#FFF] to-[#FCFCFC] p-6">
@@ -200,11 +208,10 @@ function HomeContent() {
               <img src="/npm.svg" alt="" className="h-5 w-5" />
             </div>
             <p className="mt-3 text-[15px] font-medium text-strong">
-              Package
+              npm package
             </p>
             <p className="mt-1 text-[15px] font-normal text-muted">
-              Best for developers wanting to handle spacing seamlessly on
-              localhost.
+              Add Mesurer directly to your development environment.
             </p>
             <a
               href="#installation"
@@ -222,14 +229,14 @@ function HomeContent() {
         <p>
           Then add the component preference at the root of your application:
         </p>
-        <CodeBlock as="pre">{`import { Measurer } from "mesurer";
+        <CodeBlock as="pre">{`import { Mesurer } from "mesurer";
 
 export default function RootLayout({ children }) {
   return (
     <html>
       <head>
         {process.env.NODE_ENV === "development" && (
-          <Measurer />
+          <Mesurer />
         )}
       </head>
       <body>{children}</body>
@@ -350,7 +357,7 @@ export default function RootLayout({ children }) {
               <code className="code">M</code>
             </div>
             <div className="max-w-[60%] text-right text-balance text-muted">
-              Toggle measurer on/off
+              Toggle Mesurer on/off
             </div>
           </div>
           <div className="flex items-start justify-between gap-8 border-b border-border px-2 py-2">
@@ -368,6 +375,10 @@ export default function RootLayout({ children }) {
           <div className="flex items-start justify-between gap-8 border-b border-border px-2 py-2">
             <div className="font-mono text-strong"><code className="code">P</code></div>
             <div className="max-w-[60%] text-right text-balance text-muted">Open the native Color picker</div>
+          </div>
+          <div className="flex items-start justify-between gap-8 border-b border-border px-2 py-2">
+            <div className="font-mono text-strong"><code className="code">C</code></div>
+            <div className="max-w-[60%] text-right text-balance text-muted">Drag a screenshot region (Chrome extension)</div>
           </div>
           <div className="flex items-start justify-between gap-8 border-b border-border px-2 py-2">
             <div className="font-mono text-strong">
@@ -479,7 +490,7 @@ function PrivacyContent() {
 export function App() {
   return (
     <main className="min-h-screen px-5 py-20">
-      <Measurer />
+      <Mesurer />
       <div className="mx-auto flex max-w-2xl flex-col gap-14">
         <Header showDescription={!isDocsPage} linkToHome={isDocsPage} />
         {isChangelogPage ? (

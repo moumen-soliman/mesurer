@@ -1,4 +1,4 @@
-import { readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
@@ -10,5 +10,7 @@ const outputPath = path.join(packageDir, "styles.generated.ts");
 const css = readFileSync(inputPath, "utf8");
 const source = `export const MESURER_STYLES = ${JSON.stringify(css)};\n`;
 
-writeFileSync(outputPath, source, "utf8");
+if (!existsSync(outputPath) || readFileSync(outputPath, "utf8") !== source) {
+  writeFileSync(outputPath, source, "utf8");
+}
 rmSync(inputPath, { force: true });

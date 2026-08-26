@@ -1,12 +1,21 @@
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { watch } from "node:fs";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const cssPath = path.join(packageDir, "styles.generated.css");
 const tsPath = path.join(packageDir, "styles.generated.ts");
+
+const generatedStyles = spawnSync("pnpm", ["run", "generate:styles"], {
+  cwd: packageDir,
+  stdio: "inherit",
+});
+
+if (generatedStyles.status !== 0) {
+  process.exit(generatedStyles.status ?? 1);
+}
 
 const syncStyles = () => {
   if (!existsSync(cssPath)) return;
@@ -23,7 +32,7 @@ const children = [
   }),
   spawn(
     "pnpm",
-    ["exec", "tailwindcss", "-i", "styles.css", "-o", "styles.generated.css", "--watch"],
+    ["exec", "tailwindcss", "-i", "styles.css", "-o", "styles.generated.css", "-m", "--watch"],
     { cwd: packageDir, stdio: "inherit" },
   ),
 ];

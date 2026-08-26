@@ -341,8 +341,9 @@ export const createTextInspector = (
     }
     if (element !== hoveredEl) inspect(element);
     else {
-      positionBox(hoverBox!, element.getBoundingClientRect());
-      positionCard(window, hoverCard!, element.getBoundingClientRect());
+      const rect = element.getBoundingClientRect();
+      positionBox(hoverBox!, rect);
+      positionCard(window, hoverCard!, rect);
     }
   };
 
