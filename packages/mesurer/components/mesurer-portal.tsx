@@ -1,6 +1,5 @@
 import { createPortal } from "react-dom";
 import type { ComponentPropsWithoutRef, RefObject } from "react";
-import { ColorPicker } from "./color-picker";
 import { RulersOverlay } from "./rulers-overlay";
 import { ScreenshotSelectOverlay } from "./screenshot-select-overlay";
 import { Toolbar } from "./toolbar";
@@ -25,10 +24,6 @@ type MesurerPortalProps = {
     selectedGuideIds: ComponentPropsWithoutRef<typeof RulersOverlay>["selectedGuideIds"];
   };
   overlay: ComponentPropsWithoutRef<typeof MesurerOverlay>;
-  colorPicker: Omit<
-    ComponentPropsWithoutRef<typeof ColorPicker>,
-    "toolbarRef"
-  >;
   screenshot: ComponentPropsWithoutRef<typeof ScreenshotSelectOverlay>;
   toolbar: ComponentPropsWithoutRef<typeof Toolbar>;
 };
@@ -40,14 +35,14 @@ export function MesurerPortal({
   screenshotOverlayRef,
   rulers,
   overlay,
-  colorPicker,
   screenshot,
   toolbar,
 }: MesurerPortalProps) {
   return createPortal(
     <div
       ref={rootRef}
-      className="mesurer-root msr:pointer-events-none msr:fixed msr:inset-0 msr:z-50"
+      className="mesurer-root msr:pointer-events-none msr:fixed msr:inset-0 msr:z-50 msr:outline-none"
+      tabIndex={-1}
     >
       {rulers.visible ? (
         <RulersOverlay
@@ -64,7 +59,6 @@ export function MesurerPortal({
         />
       ) : null}
       <MesurerOverlay {...overlay} />
-      <ColorPicker {...colorPicker} toolbarRef={toolbarRef} />
       <ScreenshotSelectOverlay ref={screenshotOverlayRef} {...screenshot} />
       <Toolbar ref={toolbarRef} {...toolbar} />
     </div>,

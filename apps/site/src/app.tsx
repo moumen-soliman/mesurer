@@ -1,5 +1,6 @@
 import { Mesurer } from "mesurer";
 import {
+  ArrowUpRightIcon,
   ArrowsCounterClockwiseIcon,
   CalculatorIcon,
   CameraIcon,
@@ -8,9 +9,13 @@ import {
   GearIcon,
   EyedropperIcon,
   LockKeyIcon,
+  PencilSimpleIcon,
   RulerIcon,
+  SelectionAllIcon,
   TextAaIcon,
+  TextTIcon,
   ToggleLeftIcon,
+  XLogoIcon,
 } from "@phosphor-icons/react";
 import InstallCommand from "./components/install-command";
 import CodeBlock from "./components/code-block";
@@ -75,7 +80,7 @@ function Header({
           href="https://github.com/ibelick/mesurer"
           target="_blank"
           rel="noreferrer"
-          aria-label="NPM package"
+           aria-label="Mesurer on GitHub"
           className="mb-0.5 inline-flex h-4 w-4 items-center justify-center text-muted transition-colors hover:text-strong"
         >
           <svg
@@ -90,11 +95,14 @@ function Header({
         </a>
       </div>
       {showDescription && (
-        <p className="max-w-xl leading-relaxed text-muted">
-          Visual precision for building with coding agents.
-          <br />
-          Measure, inspect, and capture exactly what you see in the browser.
-        </p>
+        <div className="flex max-w-2xl flex-col gap-2">
+          <h2 className="leading-tight text-strong">
+            Inspect, annotate, and give feedback on any live interface
+          </h2>
+          <p className="leading-relaxed text-muted">
+            Mesurer runs directly where you build. Share feedback with your agents and your team.
+          </p>
+        </div>
       )}
     </div>
   );
@@ -109,8 +117,28 @@ function HomeContent() {
     },
     {
       icon: <CursorIcon size={16} weight="light" />,
-      title: "Select mode",
+      title: "Inspect mode",
       description: "Click elements to measure their bounds",
+    },
+    {
+      icon: <ArrowUpRightIcon size={16} weight="light" />,
+      title: "Arrows",
+      description: "Draw, move, resize, rotate, and snap arrows",
+    },
+    {
+      icon: <PencilSimpleIcon size={16} weight="light" />,
+      title: "Pen",
+      description: "Draw freehand annotations and transform them",
+    },
+    {
+      icon: <TextTIcon size={16} weight="light" />,
+      title: "Text annotations",
+      description: "Add, edit, resize, rotate, and style notes",
+    },
+    {
+      icon: <SelectionAllIcon size={16} weight="light" />,
+      title: "Annotation selection",
+      description: "Multi-select and manipulate annotations together",
     },
     {
       icon: <RulerIcon size={16} weight="light" className="-rotate-90" />,
@@ -130,16 +158,16 @@ function HomeContent() {
     {
       icon: <ArrowsCounterClockwiseIcon size={16} weight="light" />,
       title: "Undo/redo",
-      description: "Command history for guide and measurement changes",
+      description: "Command history for guides, measurements, and annotations",
     },
     {
       icon: <LockKeyIcon size={16} weight="light" />,
       title: "Persist state",
-      description: "Keep guides and measurements on reload",
+      description: "Keep guides, measurements, and annotations on reload",
     },
     {
       icon: <EyedropperIcon size={16} weight="light" />,
-      title: "Color picker",
+      title: "Sample color",
       description: "Sample colors and copy values in your chosen format",
     },
     {
@@ -160,7 +188,7 @@ function HomeContent() {
     {
       icon: <GearIcon size={16} weight="light" />,
       title: "Settings",
-      description: "Configure guides, selection, rulers, and persistence",
+      description: "Configure selection, guides, arrows, text, colors, and persistence",
     },
   ];
 
@@ -226,28 +254,22 @@ function HomeContent() {
       <div id="installation" className="flex flex-col gap-4">
         <p className="font-[450] text-strong">Installation</p>
         <InstallCommand>npm install mesurer</InstallCommand>
-        <p>
-          Then add the component preference at the root of your application:
-        </p>
-        <CodeBlock as="pre">{`import { Mesurer } from "mesurer";
+         <p>Then render the component alongside your application:</p>
+         <CodeBlock as="pre">{`import { Mesurer } from "mesurer";
 
-export default function RootLayout({ children }) {
+function App() {
   return (
-    <html>
-      <head>
-        {process.env.NODE_ENV === "development" && (
-          <Mesurer />
-        )}
-      </head>
-      <body>{children}</body>
-    </html>
+    <>
+      <YourApp />
+      <Mesurer />
+    </>
   );
 }`}</CodeBlock>
       </div>
 
       <div className="flex flex-col gap-4">
         <p className="font-[450] text-strong">Props</p>
-        <div className="flex flex-col border-t border-border -mx-2">
+        <div className="site-props flex flex-col border-t border-border -mx-2 [&>div]:flex-col [&>div]:gap-2 [&>div>div:first-child]:break-words sm:[&>div]:flex-row sm:[&>div]:items-start sm:[&>div]:justify-between sm:[&>div]:gap-8 [&>div>div:last-child]:max-w-none [&>div>div:last-child]:text-left sm:[&>div>div:last-child]:max-w-[60%] sm:[&>div>div:last-child]:text-right">
           <div className="flex items-start justify-between gap-8 border-b border-border px-2 py-2">
             <div className="font-mono text-strong">
               <code className="code">highlightColor</code>
@@ -283,12 +305,24 @@ export default function RootLayout({ children }) {
             </div>
           </div>
           <div className="flex items-start justify-between gap-8 border-b border-border px-2 py-2">
+            <div className="font-mono text-strong"><code className="code">arrowColor</code></div>
+            <div className="max-w-[60%] text-right text-balance text-muted">Base color for arrows</div>
+          </div>
+          <div className="flex items-start justify-between gap-8 border-b border-border px-2 py-2">
+            <div className="font-mono text-strong"><code className="code">guideHighlightEnabled</code></div>
+            <div className="max-w-[60%] text-right text-balance text-muted">Highlights guides when hovered or selected</div>
+          </div>
+          <div className="flex items-start justify-between gap-8 border-b border-border px-2 py-2">
             <div className="font-mono text-strong">
               <code className="code">hoverHighlightEnabled</code>
             </div>
             <div className="max-w-[60%] text-right text-balance text-muted">
-              Enables hover highlighting in Select mode
+              Enables hover highlighting in Inspect mode
             </div>
+          </div>
+          <div className="flex items-start justify-between gap-8 border-b border-border px-2 py-2">
+            <div className="font-mono text-strong"><code className="code">layoutDetailsEnabled</code></div>
+            <div className="max-w-[60%] text-right text-balance text-muted">Shows gap and padding details under selected dimensions</div>
           </div>
           <div className="flex items-start justify-between gap-8 border-b border-border px-2 py-2">
             <div className="font-mono text-strong">
@@ -297,6 +331,26 @@ export default function RootLayout({ children }) {
             <div className="max-w-[60%] text-right text-balance text-muted">
               Persists workspace state across reloads
             </div>
+          </div>
+          <div className="flex items-start justify-between gap-8 border-b border-border px-2 py-2">
+            <div className="font-mono text-strong"><code className="code">persistKey</code></div>
+            <div className="max-w-[60%] text-right text-balance text-muted">Optional key for isolating persisted workspaces</div>
+          </div>
+          <div className="flex items-start justify-between gap-8 border-b border-border px-2 py-2">
+            <div className="font-mono text-strong"><code className="code">portalTarget</code></div>
+            <div className="max-w-[60%] text-right text-balance text-muted">Element or shadow root where the overlay is mounted</div>
+          </div>
+          <div className="flex items-start justify-between gap-8 border-b border-border px-2 py-2">
+            <div className="font-mono text-strong"><code className="code">persistence</code></div>
+            <div className="max-w-[60%] text-right text-balance text-muted">Custom storage adapter for settings and workspace state</div>
+          </div>
+          <div className="flex items-start justify-between gap-8 border-b border-border px-2 py-2">
+            <div className="font-mono text-strong"><code className="code">onPersistenceError</code></div>
+            <div className="max-w-[60%] text-right text-balance text-muted">Called when persistence is unavailable or a write fails</div>
+          </div>
+          <div className="flex items-start justify-between gap-8 border-b border-border px-2 py-2">
+            <div className="font-mono text-strong"><code className="code">captureVisibleTab</code></div>
+            <div className="max-w-[60%] text-right text-balance text-muted">Provides a visible-tab PNG for Screenshot capture</div>
           </div>
           <div className="flex items-start justify-between gap-8 border-b border-border px-2 py-2">
             <div className="font-mono text-strong">
@@ -313,6 +367,14 @@ export default function RootLayout({ children }) {
             <div className="max-w-[60%] text-right text-balance text-muted">
               Snap guides to other guides
             </div>
+          </div>
+          <div className="flex items-start justify-between gap-8 border-b border-border px-2 py-2">
+            <div className="font-mono text-strong"><code className="code">snapArrowsEnabled</code></div>
+            <div className="max-w-[60%] text-right text-balance text-muted">Snap arrow endpoints to nearby elements</div>
+          </div>
+          <div className="flex items-start justify-between gap-8 border-b border-border px-2 py-2">
+            <div className="font-mono text-strong"><code className="code">arrowClickToPlace</code></div>
+            <div className="max-w-[60%] text-right text-balance text-muted">Place arrows with clicks instead of dragging</div>
           </div>
           <div className="flex items-start justify-between gap-8 border-b border-border px-2 py-2">
             <div className="font-mono text-strong">
@@ -346,6 +408,10 @@ export default function RootLayout({ children }) {
               Ruler opacity and edge reveal
             </div>
           </div>
+          <div className="flex items-start justify-between gap-8 border-b border-border px-2 py-2">
+            <div className="font-mono text-strong"><code className="code">textStyle</code></div>
+            <div className="max-w-[60%] text-right text-balance text-muted">Default text annotation font and color</div>
+          </div>
         </div>
       </div>
 
@@ -362,19 +428,31 @@ export default function RootLayout({ children }) {
           </div>
           <div className="flex items-start justify-between gap-8 border-b border-border px-2 py-2">
             <div className="font-mono text-strong">
-              <code className="code">S</code>
+              <code className="code">I</code>
             </div>
             <div className="max-w-[60%] text-right text-balance text-muted">
-              Toggle Select mode
+              Toggle Inspect mode
             </div>
+          </div>
+          <div className="flex items-start justify-between gap-8 border-b border-border px-2 py-2">
+            <div className="font-mono text-strong"><code className="code">S</code></div>
+            <div className="max-w-[60%] text-right text-balance text-muted">Toggle Select mode for annotations</div>
           </div>
           <div className="flex items-start justify-between gap-8 border-b border-border px-2 py-2">
             <div className="font-mono text-strong"><code className="code">A</code></div>
-            <div className="max-w-[60%] text-right text-balance text-muted">Toggle Text Inspector mode</div>
+            <div className="max-w-[60%] text-right text-balance text-muted">Toggle Typography mode</div>
+          </div>
+          <div className="flex items-start justify-between gap-8 border-b border-border px-2 py-2">
+            <div className="font-mono text-strong"><code className="code">1 / 2</code></div>
+            <div className="max-w-[60%] text-right text-balance text-muted">Switch between Select &amp; Inspect and Annotate tools</div>
+          </div>
+          <div className="flex items-start justify-between gap-8 border-b border-border px-2 py-2">
+            <div className="font-mono text-strong"><code className="code">D / N / T</code></div>
+            <div className="max-w-[60%] text-right text-balance text-muted">Toggle Arrows, Pen, or Text mode</div>
           </div>
           <div className="flex items-start justify-between gap-8 border-b border-border px-2 py-2">
             <div className="font-mono text-strong"><code className="code">P</code></div>
-            <div className="max-w-[60%] text-right text-balance text-muted">Open the native Color picker</div>
+            <div className="max-w-[60%] text-right text-balance text-muted">Open the native color sampler</div>
           </div>
           <div className="flex items-start justify-between gap-8 border-b border-border px-2 py-2">
             <div className="font-mono text-strong"><code className="code">C</code></div>
@@ -425,7 +503,7 @@ export default function RootLayout({ children }) {
               <code className="code">Esc</code>
             </div>
             <div className="max-w-[60%] text-right text-balance text-muted">
-              Close settings or picker; else clear all
+              Exit the active tool; press twice to exit completely
             </div>
           </div>
           <div className="flex items-start justify-between gap-8 border-b border-border px-2 py-2">
@@ -434,7 +512,7 @@ export default function RootLayout({ children }) {
               <code className="code">Delete</code>
             </div>
             <div className="max-w-[60%] text-right text-balance text-muted">
-              Remove selected guides
+              Remove selected guides, arrows, pen strokes, or text
             </div>
           </div>
           <div className="flex items-start justify-between gap-8 border-b border-border px-2 py-2">
@@ -451,6 +529,14 @@ export default function RootLayout({ children }) {
             </div>
             <div className="max-w-[60%] text-right text-balance text-muted">
               Redo
+            </div>
+          </div>
+          <div className="flex items-start justify-between gap-8 border-b border-border px-2 py-2">
+            <div className="font-mono text-strong">
+              <code className="code">Cmd/Ctrl + A</code>
+            </div>
+            <div className="max-w-[60%] text-right text-balance text-muted">
+              Select all annotations
             </div>
           </div>
           <div className="flex items-start justify-between gap-8 border-b border-border px-2 py-2">
@@ -515,6 +601,16 @@ export function App() {
               className="transition-colors hover:text-strong"
             >
               Feedback
+            </a>
+            <a
+              href="https://x.com/mesurerdev"
+              target="_blank"
+              rel="noreferrer"
+              aria-label="Follow Mesurer on X"
+              className="inline-flex items-center gap-1 transition-colors hover:text-strong"
+            >
+              <XLogoIcon size={14} weight="regular" aria-hidden="true" />
+              <span>Follow</span>
             </a>
             <a href="/privacy" className="transition-colors hover:text-strong">
               Privacy

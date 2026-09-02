@@ -1,10 +1,17 @@
 import type {
   DistanceOverlay,
   Guide,
+  Arrow,
+  PenStroke,
   Measurement,
+  TextAnnotation,
+  PersistentToolMode,
   ToolMode,
 } from "./types"
 import type { ColorPickerFormat } from "./colors"
+import { normalizeTextStyle, type TextStyleSettings } from "./text-style"
+
+export type { TextFont, TextStyleSettings } from "./text-style"
 
 export const MESURER_STORAGE_VERSION = 2
 
@@ -47,20 +54,26 @@ export const DEFAULT_SCREENSHOT_SETTINGS: ScreenshotSettings = {
 }
 
 export type MesurerStoredSettings = {
+  lastToolMode?: PersistentToolMode
   highlightColor?: string
   guideColor?: string
+  arrowColor?: string
   guideHighlightEnabled?: boolean
   hoverHighlightEnabled?: boolean
+  layoutDetailsEnabled?: boolean
   colorPickerFormats?: ColorPickerFormat[]
   colorPickerClickFormat?: ColorPickerFormat
   snapEnabled?: boolean
   snapGuidesEnabled?: boolean
+  snapArrowsEnabled?: boolean
+  arrowClickToPlace?: boolean
   selectNewGuideEnabled?: boolean
   multiMeasureEnabled?: boolean
   persistOnReload?: boolean
   guideStyle?: Partial<GuideStyle>
   rulerSettings?: Partial<RulerSettings>
   screenshotSettings?: Partial<ScreenshotSettings>
+  textStyle?: Partial<TextStyleSettings>
 }
 
 export type MesurerStoredWorkspace = {
@@ -71,6 +84,12 @@ export type MesurerStoredWorkspace = {
   guideOrientation: "vertical" | "horizontal"
   guides: Guide[]
   selectedGuideIds: string[]
+  arrows: Arrow[]
+  selectedArrowIds: string[]
+  selectedPenStrokeIds?: string[]
+  selectedTextIds?: string[]
+  penStrokes: PenStroke[]
+  textAnnotations: TextAnnotation[]
   measurements: Measurement[]
   activeMeasurement: Measurement | null
   heldDistances: DistanceOverlay[]
@@ -112,6 +131,12 @@ type StoredRecord = {
   guideOrientation?: "vertical" | "horizontal"
   guides?: Guide[]
   selectedGuideIds?: string[]
+  arrows?: Arrow[]
+  selectedArrowIds?: string[]
+  selectedPenStrokeIds?: string[]
+  selectedTextIds?: string[]
+  penStrokes?: PenStroke[]
+  textAnnotations?: TextAnnotation[]
   measurements?: Measurement[]
   activeMeasurement?: Measurement | null
   heldDistances?: DistanceOverlay[]
@@ -189,6 +214,50 @@ const isGuide = (value: unknown): value is Guide => {
   )
 }
 
+const isArrow = (value: unknown): value is Arrow => {
+  if (!value || typeof value !== "object") return false
+  const arrow = value as Record<string, unknown>
+  const start = arrow.start as Record<string, unknown> | undefined
+  const end = arrow.end as Record<string, unknown> | undefined
+  const control = arrow.control as Record<string, unknown> | undefined
+  return (
+    typeof arrow.id === "string" &&
+    isFiniteNumber(start?.x) &&
+    isFiniteNumber(start?.y) &&
+    isFiniteNumber(end?.x) &&
+    isFiniteNumber(end?.y) &&
+    (control === undefined || (isFiniteNumber(control.x) && isFiniteNumber(control.y))) &&
+    typeof arrow.color === "string" &&
+    isFiniteNumber(arrow.width) &&
+    arrow.width > 0
+  )
+}
+
+const isPenStroke = (value: unknown): value is PenStroke => {
+  if (!value || typeof value !== "object") return false
+  const stroke = value as Record<string, unknown>
+  return typeof stroke.id === "string" && typeof stroke.color === "string" && isFiniteNumber(stroke.width) && stroke.width > 0 && Array.isArray(stroke.points) && stroke.points.every((point) => {
+    if (!point || typeof point !== "object") return false
+    const item = point as Record<string, unknown>
+    return isFiniteNumber(item.x) && isFiniteNumber(item.y)
+  })
+}
+
+const isTextAnnotation = (value: unknown): value is TextAnnotation => {
+  if (!value || typeof value !== "object") return false
+  const annotation = value as Record<string, unknown>
+  return (
+    typeof annotation.id === "string" &&
+    isFiniteNumber(annotation.x) &&
+    isFiniteNumber(annotation.y) &&
+    typeof annotation.text === "string" &&
+    annotation.text.length > 0 &&
+    (annotation.scale === undefined || (isFiniteNumber(annotation.scale) && annotation.scale > 0)) &&
+    (annotation.rotation === undefined || isFiniteNumber(annotation.rotation)) &&
+    (annotation.boxWidth === undefined || (isFiniteNumber(annotation.boxWidth) && annotation.boxWidth > 0))
+  )
+}
+
 const isDistanceOverlay = (value: unknown): value is DistanceOverlay => {
   if (!value || typeof value !== "object") return false
   const distance = value as Record<string, unknown>
@@ -225,10 +294,15 @@ export const normalizeStoredSettings = (value: unknown): MesurerStoredSettings =
   if (!value || typeof value !== "object") return {}
   const input = value as Record<string, unknown>
   return {
+    ...(input.lastToolMode === "select" || input.lastToolMode === "selection" || input.lastToolMode === "guides" || input.lastToolMode === "arrows" || input.lastToolMode === "pen" || input.lastToolMode === "text"
+      ? { lastToolMode: input.lastToolMode }
+      : {}),
     ...(typeof input.highlightColor === "string" ? { highlightColor: input.highlightColor } : {}),
     ...(typeof input.guideColor === "string" ? { guideColor: input.guideColor } : {}),
+    ...(typeof input.arrowColor === "string" ? { arrowColor: input.arrowColor } : {}),
     ...(typeof input.guideHighlightEnabled === "boolean" ? { guideHighlightEnabled: input.guideHighlightEnabled } : {}),
     ...(typeof input.hoverHighlightEnabled === "boolean" ? { hoverHighlightEnabled: input.hoverHighlightEnabled } : {}),
+    ...(typeof input.layoutDetailsEnabled === "boolean" ? { layoutDetailsEnabled: input.layoutDetailsEnabled } : {}),
     ...(Array.isArray(input.colorPickerFormats) && input.colorPickerFormats.some(isFormat)
       ? { colorPickerFormats: input.colorPickerFormats.filter(isFormat) }
       : {}),
@@ -237,6 +311,8 @@ export const normalizeStoredSettings = (value: unknown): MesurerStoredSettings =
       : {}),
     ...(typeof input.snapEnabled === "boolean" ? { snapEnabled: input.snapEnabled } : {}),
     ...(typeof input.snapGuidesEnabled === "boolean" ? { snapGuidesEnabled: input.snapGuidesEnabled } : {}),
+    ...(typeof input.snapArrowsEnabled === "boolean" ? { snapArrowsEnabled: input.snapArrowsEnabled } : {}),
+    ...(typeof input.arrowClickToPlace === "boolean" ? { arrowClickToPlace: input.arrowClickToPlace } : {}),
     ...(typeof input.selectNewGuideEnabled === "boolean" ? { selectNewGuideEnabled: input.selectNewGuideEnabled } : {}),
     ...(typeof input.multiMeasureEnabled === "boolean" ? { multiMeasureEnabled: input.multiMeasureEnabled } : {}),
     ...(typeof input.persistOnReload === "boolean" ? { persistOnReload: input.persistOnReload } : {}),
@@ -245,6 +321,7 @@ export const normalizeStoredSettings = (value: unknown): MesurerStoredSettings =
     ...(normalizeScreenshotSettings(input.screenshotSettings)
       ? { screenshotSettings: normalizeScreenshotSettings(input.screenshotSettings) }
       : {}),
+    ...(normalizeTextStyle(input.textStyle) ? { textStyle: normalizeTextStyle(input.textStyle) } : {}),
   }
 }
 
@@ -253,7 +330,7 @@ export const normalizeStoredWorkspace = (value: unknown): MesurerStoredWorkspace
   const input = value as Record<string, unknown>
   if (
     typeof input.enabled !== "boolean" ||
-    (input.toolMode !== "none" && input.toolMode !== "select" && input.toolMode !== "guides" && input.toolMode !== "text-inspector" && input.toolMode !== "xray" && input.toolMode !== "rulers") ||
+    (input.toolMode !== "none" && input.toolMode !== "select" && input.toolMode !== "selection" && input.toolMode !== "guides" && input.toolMode !== "text-inspector" && input.toolMode !== "xray" && input.toolMode !== "rulers" && input.toolMode !== "arrows" && input.toolMode !== "pen" && input.toolMode !== "text") ||
     typeof input.rulersVisible !== "boolean" ||
     (input.guideOrientation !== "vertical" && input.guideOrientation !== "horizontal") ||
     !Array.isArray(input.guides) ||
@@ -269,6 +346,20 @@ export const normalizeStoredWorkspace = (value: unknown): MesurerStoredWorkspace
     guideOrientation: input.guideOrientation,
     guides: input.guides.filter(isGuide),
     selectedGuideIds: input.selectedGuideIds.filter((id): id is string => typeof id === "string"),
+    arrows: Array.isArray(input.arrows) ? input.arrows.filter(isArrow) : [],
+    selectedArrowIds: Array.isArray(input.selectedArrowIds)
+      ? input.selectedArrowIds.filter((id): id is string => typeof id === "string")
+      : [],
+    selectedPenStrokeIds: Array.isArray(input.selectedPenStrokeIds)
+      ? input.selectedPenStrokeIds.filter((id): id is string => typeof id === "string")
+      : [],
+    selectedTextIds: Array.isArray(input.selectedTextIds)
+      ? input.selectedTextIds.filter((id): id is string => typeof id === "string")
+      : [],
+    penStrokes: Array.isArray(input.penStrokes) ? input.penStrokes.filter(isPenStroke) : [],
+    textAnnotations: Array.isArray(input.textAnnotations)
+      ? input.textAnnotations.filter(isTextAnnotation)
+      : [],
     measurements: input.measurements.filter(isMeasurement),
     activeMeasurement: isMeasurement(input.activeMeasurement) ? input.activeMeasurement : null,
     heldDistances: input.heldDistances.filter(isDistanceOverlay),
@@ -313,6 +404,12 @@ const migrate = (record: StoredRecord): MesurerPersistenceSnapshot | null => {
             guideOrientation: record.guideOrientation,
             guides: record.guides,
             selectedGuideIds: record.selectedGuideIds,
+            arrows: [],
+             selectedArrowIds: [],
+             selectedPenStrokeIds: [],
+             selectedTextIds: [],
+             penStrokes: [],
+             textAnnotations: [],
             measurements: record.measurements,
             activeMeasurement: record.activeMeasurement,
             heldDistances: record.heldDistances,

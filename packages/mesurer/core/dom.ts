@@ -1,8 +1,9 @@
 import { denormalizeRect, getViewportSize, normalizeRect } from "./geometry"
-import type { InspectMeasurement, Measurement, Rect } from "./types"
+import { isLayoutContainerDisplay } from "./layout-details"
+import type { InspectMeasurement, LayoutGap, Measurement, Rect } from "./types"
 import { createId } from "./utils"
 
-const getElementLabel = (element: HTMLElement) => {
+const getElementLabel = (element: Element) => {
   const tag = element.tagName.toLowerCase()
   const id = element.id ? `#${element.id}` : ""
   const className = element.className
@@ -12,6 +13,14 @@ const getElementLabel = (element: HTMLElement) => {
 }
 
 const parseEdge = (value: string) => Number.parseFloat(value) || 0
+
+const readLayoutGap = (style: CSSStyleDeclaration): LayoutGap | null => {
+  if (!isLayoutContainerDisplay(style.display)) return null
+  const row = parseEdge(style.rowGap)
+  const column = parseEdge(style.columnGap)
+  if (row === 0 && column === 0) return null
+  return { row, column }
+}
 
 export const getRectFromDom = (element: Element): Rect => {
   const rect = element.getBoundingClientRect()
@@ -39,7 +48,7 @@ export const getRectFromDomCached = (element: Element) => {
   return rect
 }
 
-let cachedElements: HTMLElement[] = []
+let cachedElements: Element[] = []
 let cachedFrame = -1
 let cachedDocument: Document | null = null
 
@@ -55,14 +64,13 @@ export const getBodyElementsCached = (ownerDocument: Document = document) => {
   }
   cachedFrame = frame
   cachedDocument = ownerDocument
-  const elements: HTMLElement[] = []
-  const HTMLElementConstructor =
-    ownerDocument.defaultView?.HTMLElement ?? HTMLElement
-  const visit = (root: Document | ShadowRoot | HTMLElement) => {
+  const elements: Element[] = []
+  const ElementConstructor = ownerDocument.defaultView?.Element ?? Element
+  const visit = (root: Document | ShadowRoot | Element) => {
     const walker = ownerDocument.createTreeWalker(root, 1)
     let node = walker.nextNode()
     while (node) {
-      if (node instanceof HTMLElementConstructor) {
+      if (node instanceof ElementConstructor) {
         elements.push(node)
         if (node.shadowRoot) visit(node.shadowRoot)
       }
@@ -75,7 +83,7 @@ export const getBodyElementsCached = (ownerDocument: Document = document) => {
 }
 
 export const getInspectMeasurement = (
-  element: HTMLElement,
+  element: Element,
   ownerWindow: Window = window,
 ): InspectMeasurement => {
   const rect = element.getBoundingClientRect()
@@ -104,6 +112,7 @@ export const getInspectMeasurement = (
     width: rect.width + margin.left + margin.right,
     height: rect.height + margin.top + margin.bottom,
   }
+  const gap = readLayoutGap(style)
   return {
     id: createId(),
     rect: {
@@ -116,6 +125,7 @@ export const getInspectMeasurement = (
     marginRect,
     padding,
     margin,
+    gap,
     label: getElementLabel(element),
     elementRef: element,
   }

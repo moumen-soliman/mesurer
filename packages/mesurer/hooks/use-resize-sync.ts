@@ -1,5 +1,5 @@
 import type { Dispatch, RefObject, SetStateAction } from "react"
-import { useEffect, useRef } from "react"
+import { useLayoutEffect, useRef } from "react"
 import { updateDistanceForResize } from "../core/distances"
 import { getInspectMeasurement, updateMeasurementForResize } from "../core/dom"
 import { getViewportSize } from "../core/geometry"
@@ -18,7 +18,7 @@ type ResizeParams = {
   setHeldDistances: Dispatch<SetStateAction<DistanceOverlay[]>>
   setSelectedMeasurement: Dispatch<SetStateAction<InspectMeasurement | null>>
   setGuides: Dispatch<SetStateAction<Guide[]>>
-  selectedElementRef: RefObject<HTMLElement | null>
+  selectedElementRef: RefObject<Element | null>
 }
 
 export const useResizeSync = (params: ResizeParams) => {
@@ -27,7 +27,7 @@ export const useResizeSync = (params: ResizeParams) => {
   const resizeFrameRef = useRef<number | null>(null)
   const viewportRef = useRef(getViewportSize(params.window))
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const ownerWindow = params.window
     const handleResize = () => {
       const current = paramsRef.current

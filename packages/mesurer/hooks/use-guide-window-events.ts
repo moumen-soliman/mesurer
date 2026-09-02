@@ -1,6 +1,7 @@
-import { useEffect, useRef, type Dispatch, type RefObject, type SetStateAction } from "react"
+import { useLayoutEffect, useRef, type Dispatch, type RefObject, type SetStateAction } from "react"
 import { GUIDE_HITBOX_SIZE } from "../core/constants"
 import { getSnapGuidePosition } from "../core/guides"
+import { isPointerDragActive } from "../core/pointer-drag"
 import type { Guide, ToolMode } from "../core/types"
 
 type GuideDrag = {
@@ -9,6 +10,9 @@ type GuideDrag = {
   pointerId: number
   commit: () => void
   committed: boolean
+  group: boolean
+  lastX: number
+  lastY: number
 }
 
 type UseGuideWindowEventsOptions = {
@@ -26,6 +30,9 @@ type UseGuideWindowEventsOptions = {
   setGuides: Dispatch<SetStateAction<Guide[]>>
   setSelectedGuideIds: Dispatch<SetStateAction<string[]>>
   setToolbarActive: (active: boolean) => void
+  selectedGuideIds: string[]
+  selectionCount: number
+  moveSelectedAnnotations: (dx: number, dy: number) => void
 }
 
 export const useGuideWindowEvents = ({
@@ -43,6 +50,9 @@ export const useGuideWindowEvents = ({
   setGuides,
   setSelectedGuideIds,
   setToolbarActive,
+  selectedGuideIds,
+  selectionCount,
+  moveSelectedAnnotations,
 }: UseGuideWindowEventsOptions) => {
   const guideScrollRef = useRef({
     x: ownerWindow.scrollX,
@@ -63,6 +73,9 @@ export const useGuideWindowEvents = ({
     setToolbarActive,
     toolbarRef,
     overlayRef,
+    selectedGuideIds,
+    selectionCount,
+    moveSelectedAnnotations,
   })
   optionsRef.current = {
     enabled,
@@ -77,15 +90,21 @@ export const useGuideWindowEvents = ({
     setToolbarActive,
     toolbarRef,
     overlayRef,
+    selectedGuideIds,
+    selectionCount,
+    moveSelectedAnnotations,
   }
 
-  if (!enabled && guideUserSelectRef.current !== null) {
-    ownerDocument.documentElement.style.userSelect = guideUserSelectRef.current
-    guideUserSelectRef.current = null
-    guideDragRef.current = null
-  }
-
-  useEffect(() => {
+  useLayoutEffect(() => {
+    if (!enabled) {
+      guideDragRef.current = null
+      if (guideUserSelectRef.current !== null) {
+        ownerDocument.documentElement.style.userSelect = guideUserSelectRef.current
+        guideUserSelectRef.current = null
+        guideDragRef.current = null
+      }
+      return
+    }
     const handleScroll = () => {
       const next = {
         x: ownerWindow.scrollX,
@@ -116,8 +135,28 @@ export const useGuideWindowEvents = ({
       if (!current.enabled) return
       if (current.settingsOpen) return
       if (current.toolbarRef.current?.contains(event.target as Node)) return
+      if (isPointerDragActive()) return
       const OwnerElement = (ownerWindow as Window & { Element: typeof Element })
         .Element
+      if (
+        event.composedPath().some((target) => {
+          if (!(target instanceof OwnerElement)) return false
+          return (
+            target.hasAttribute("data-mesurer-group-frame") ||
+            target.hasAttribute("data-mesurer-group-handle") ||
+            target.hasAttribute("data-mesurer-group-controls") ||
+            target.hasAttribute("data-mesurer-pen-id") ||
+            target.hasAttribute("data-mesurer-pen-frame") ||
+            target.hasAttribute("data-mesurer-pen-handle") ||
+            target.hasAttribute("data-mesurer-arrow-id") ||
+            target.hasAttribute("data-mesurer-text-id") ||
+            target.hasAttribute("data-mesurer-text-frame") ||
+            target.hasAttribute("data-mesurer-text-handle")
+          )
+        })
+      ) {
+        return
+      }
       const guideTarget = event.composedPath().some(
         (target) =>
           target instanceof OwnerElement &&
@@ -135,6 +174,9 @@ export const useGuideWindowEvents = ({
       })
       if (!guide) return
 
+      const alreadySelected = current.selectedGuideIds.includes(guide.id)
+      const groupMove = alreadySelected && current.selectionCount > 1
+
       if (event.button === 0 && !event.shiftKey) {
         event.preventDefault()
         event.stopPropagation()
@@ -144,8 +186,13 @@ export const useGuideWindowEvents = ({
           pointerId: event.pointerId,
           commit: current.createActionCommit(),
           committed: false,
+          group: groupMove,
+          lastX: event.clientX,
+          lastY: event.clientY,
         }
       }
+
+      if (groupMove) return
 
       current.setSelectedGuideIds((prev) =>
         event.shiftKey
@@ -157,19 +204,11 @@ export const useGuideWindowEvents = ({
     }
 
     const handleGuidePointerMove = (event: PointerEvent) => {
+      if (isPointerDragActive()) return
       const drag = guideDragRef.current
       if (!drag || drag.pointerId !== event.pointerId) return
       if (!optionsRef.current.enabled) return
       const current = optionsRef.current
-      const position = getSnapGuidePosition({
-        orientation: drag.orientation,
-        point: { x: event.clientX, y: event.clientY },
-        snapGuidesEnabled: current.snapGuidesEnabled,
-        overlayNode: current.overlayRef.current,
-        guides: current.guides,
-        draggingGuideId: drag.id,
-        document: ownerDocument,
-      })
       if (!drag.committed) {
         event.preventDefault()
         if (guideUserSelectRef.current === null) {
@@ -181,6 +220,24 @@ export const useGuideWindowEvents = ({
         drag.commit()
         drag.committed = true
       }
+      if (drag.group) {
+        current.moveSelectedAnnotations(
+          event.clientX - drag.lastX,
+          event.clientY - drag.lastY,
+        )
+        drag.lastX = event.clientX
+        drag.lastY = event.clientY
+        return
+      }
+      const position = getSnapGuidePosition({
+        orientation: drag.orientation,
+        point: { x: event.clientX, y: event.clientY },
+        snapGuidesEnabled: current.snapGuidesEnabled,
+        overlayNode: current.overlayRef.current,
+        guides: current.guides,
+        draggingGuideId: drag.id,
+        document: ownerDocument,
+      })
       optionsRef.current.setGuides((prev) =>
         prev.map((guide) =>
           guide.id === drag.id ? { ...guide, position } : guide,
@@ -227,6 +284,7 @@ export const useGuideWindowEvents = ({
           guideUserSelectRef.current
         guideUserSelectRef.current = null
       }
+      guideDragRef.current = null
     }
-  }, [ownerDocument, ownerWindow])
+  }, [enabled, ownerDocument, ownerWindow])
 }

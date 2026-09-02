@@ -68,81 +68,139 @@
   }
 }
 
-.mesurer-toolbar-surface {
-  overflow: visible;
-  box-shadow:
-    0 0 0.5px rgba(0, 0, 0, 0.18),
-    0 3px 8px rgba(0, 0, 0, 0.1),
-    0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.mesurer-menu-surface {
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-}
-
-.mesurer-color-picker {
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  box-shadow:
-    0 10px 15px -3px rgb(0 0 0 / 0.1),
-    0 4px 6px -4px rgb(0 0 0 / 0.1);
-}
-
-.mesurer-toast-surface {
-  width: max-content;
-  max-width: min(240px, calc(100vw - 16px));
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  box-shadow:
-    0 0 0.5px rgba(0, 0, 0, 0.18),
-    0 3px 8px rgba(0, 0, 0, 0.1),
-    0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.mesurer-screenshot-preview {
-  pointer-events: none;
-  position: absolute;
-  left: 50%;
-  z-index: 100;
-  width: max-content;
-  max-width: min(200px, calc(100vw - 24px));
-  padding: 4px;
-  overflow: hidden;
-  border-radius: 4px;
-  background: #000;
-  transform: translateX(-50%);
-  box-shadow:
-    0 0 0.5px rgba(0, 0, 0, 0.18),
-    0 3px 8px rgba(0, 0, 0, 0.1),
-    0 1px 3px rgba(0, 0, 0, 0.1);
-  animation: mesurer-screenshot-preview 5.16s ease-out both;
-}
-
-.mesurer-screenshot-preview[data-side="bottom"] {
-  top: 100%;
-  margin-top: 8px;
-}
-
-.mesurer-screenshot-preview[data-side="top"] {
-  bottom: 100%;
-  margin-bottom: 8px;
-}
-
-.mesurer-screenshot-preview-image {
+.mesurer-toolbar-motion {
+  --msr-toolbar-motion: 200ms ease;
+  position: relative;
   display: block;
-  width: auto;
-  height: auto;
-  max-width: 180px;
-  max-height: 120px;
-  border-radius: 2px;
+  width: max-content;
+  max-width: 100%;
+  padding: 4px;
+}
+
+.mesurer-toolbar-chrome {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: visible;
+  border-radius: 12px;
   background: #fff;
-  object-fit: contain;
+  outline: 1px solid transparent;
+  transform-origin: 0 50%;
+  pointer-events: none;
+  box-shadow:
+    0 0 0.5px rgba(0, 0, 0, 0.18),
+    0 3px 8px rgba(0, 0, 0, 0.1),
+    0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.mesurer-toolbar-surface {
+  position: relative;
+  z-index: 1;
+}
+
+.mesurer-toolbar-tool-stage {
+  flex: none;
+  min-width: 0;
+  width: var(--msr-inspect-w, auto);
+  overflow: hidden;
+}
+
+.mesurer-toolbar-tool-stage[data-group="annotate"] {
+  width: var(--msr-annotate-w, auto);
+}
+
+.mesurer-toolbar-tool-stage[data-group="annotate"] .mesurer-toolbar-tool-track {
+  transform: translateX(calc(-1 * var(--msr-inspect-w, 0px)));
+}
+
+.mesurer-toolbar-tool-stage:has([role="menu"]) {
+  overflow: visible;
+}
+
+.mesurer-toolbar-tool-track {
+  display: flex;
+  flex: none;
+  transform: translateX(0);
+}
+
+.mesurer-toolbar-motion[data-ready="true"] .mesurer-toolbar-tool-switch-pill {
+  transition: transform var(--msr-toolbar-motion);
+}
+
+.mesurer-toolbar-tool-slot {
+  flex: none;
+}
+
+.mesurer-toolbar-tool-slot[data-group="inspect"] {
+  width: var(--msr-inspect-w, auto);
+}
+
+.mesurer-toolbar-tool-slot[data-group="annotate"] {
+  width: var(--msr-annotate-w, auto);
+}
+
+.mesurer-toolbar-tool-slot:not([data-open="true"]) {
+  pointer-events: none;
+}
+
+.mesurer-toolbar-tool-panel {
+  width: max-content;
+}
+
+.mesurer-toolbar-tooltips {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.mesurer-toolbar-trailing {
+  position: relative;
+  z-index: 1;
+  flex: none;
+  background: #fff;
+}
+
+.mesurer-toolbar-tool-switch {
+  position: relative;
+}
+
+.mesurer-toolbar-tool-switch-pill {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  z-index: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: var(--color-ink-200);
+  transform: translateX(0);
+}
+
+.mesurer-toolbar-tool-switch[data-value="annotate"] .mesurer-toolbar-tool-switch-pill {
+  transform: translateX(30px);
+}
+
+.mesurer-toolbar-tool-switch > :not(.mesurer-toolbar-tool-switch-pill) {
+  position: relative;
+  z-index: 1;
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .mesurer-toolbar-motion,
+  .mesurer-toolbar-chrome,
+  .mesurer-toolbar-tool-track,
+  .mesurer-toolbar-trailing,
+  .mesurer-toolbar-motion[data-ready="true"] .mesurer-toolbar-tool-switch-pill {
+    transition: none;
+  }
+
   .mesurer-screenshot-preview {
-    animation: mesurer-screenshot-preview-reduced 5s linear both;
+    animation-name: mesurer-screenshot-preview-reduced;
+    animation-duration: 5s;
+    animation-timing-function: linear;
+    animation-fill-mode: both;
   }
 }
 
@@ -164,36 +222,15 @@
   }
 }
 
-.mesurer-settings-panel {
-  overflow-y: auto;
-  overscroll-behavior-x: none;
-  scrollbar-width: none;
-}
-
 .mesurer-settings-panel::-webkit-scrollbar {
   display: none;
 }
 
-.mesurer-switch-track {
-  box-sizing: border-box;
-  border: 1px solid #e2e8f0;
-}
-
-.mesurer-switch-track[data-checked="true"] {
-  border-color: #0d99ff;
-}
-
-.mesurer-control-shell {
-  border: 1px solid transparent;
-}
-
-.mesurer-control-shell:hover {
-  border-color: #e2e8f0;
-}
-
-.mesurer-control-focus:focus-within {
-  outline: 1px solid #0d99ff;
-  outline-offset: -1px;
+.mesurer-toast-surface {
+  box-shadow:
+    0 0 0.5px rgba(0, 0, 0, 0.18),
+    0 3px 8px rgba(0, 0, 0, 0.1),
+    0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .mesurer-root {

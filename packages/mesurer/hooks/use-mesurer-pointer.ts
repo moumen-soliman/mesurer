@@ -1,18 +1,10 @@
-import { useCallback, useRef } from "react"
+import { useCallback } from "react"
 import type {
   MutableRefObject,
   PointerEvent as ReactPointerEvent,
   SetStateAction,
 } from "react"
-import { getInspectMeasurement } from "../core/dom"
-import { getRectFromPoints } from "../core/geometry"
 import { getSnapGuidePosition } from "../core/guides"
-import {
-  getElementsInRectCached,
-  getSnappedClickTarget,
-  getTargetElement,
-} from "../core/selection"
-import { getSelectedMeasurementHit } from "../core/selection-helpers"
 import type {
   DistanceOverlay,
   Guide,
@@ -23,6 +15,8 @@ import type {
   ToolMode,
 } from "../core/types"
 import { createId } from "../core/utils"
+import { useMesurerPointerSelection } from "./use-mesurer-pointer-selection"
+import { useMesurerPointerHover } from "./use-mesurer-pointer-hover"
 
 type GuidePreview = {
   orientation: "vertical" | "horizontal"
@@ -76,11 +70,19 @@ type UseMesurerPointerArgs = {
     value: SetStateAction<InspectMeasurement | null>
   ) => void
   setSelectionOriginRect: (value: SetStateAction<Rect | null>) => void
-  setSelectedElement: (value: HTMLElement | null) => void
+  setSelectedElement: (value: Element | null) => void
   setHoverRect: (value: SetStateAction<Rect | null>) => void
-  setHoverElement: (value: HTMLElement | null) => void
+  setHoverElement: (value: Element | null) => void
   setHoverPointer: (value: SetStateAction<Point | null>) => void
   clearSelectionRect: () => void
+  selectionMode: boolean
+  scrollOffset: Point
+  textAnnotations: import("../core/types").TextAnnotation[]
+  arrows: import("../core/types").Arrow[]
+  penStrokes: import("../core/types").PenStroke[]
+  setSelectedTextIds: (value: SetStateAction<string[]>) => void
+  setSelectedArrowIds: (value: SetStateAction<string[]>) => void
+  setSelectedPenStrokeIds: (value: SetStateAction<string[]>) => void
 }
 
 export const useMesurerPointer = ({
@@ -130,45 +132,48 @@ export const useMesurerPointer = ({
   setHoverElement,
   setHoverPointer,
   clearSelectionRect,
+  selectionMode,
+  scrollOffset,
+  textAnnotations,
+  arrows,
+  penStrokes,
+  setSelectedTextIds,
+  setSelectedArrowIds,
+  setSelectedPenStrokeIds,
 }: UseMesurerPointerArgs) => {
-  const hoverFrameRef = useRef<number | null>(null)
-  const hoverPointRef = useRef<Point | null>(null)
-  const selectionCacheRef = useRef({
-    key: "",
-    entries: [] as Array<{ element: HTMLElement; rect: Rect }>,
-    overlayNode: null as HTMLDivElement | null,
-    frame: -1,
+  const hover = useMesurerPointerHover({
+    document,
+    overlayRef,
+    setHoverRect,
+    setHoverElement,
   })
-  const shiftDragRef = useRef(false)
-  const shiftToggleElementRef = useRef<HTMLElement | null>(null)
-
-  const updateHoverTarget = useCallback(
-    (point: Point) => {
-      const target = getTargetElement(point, overlayRef.current, document)
-      if (target) {
-        const rect = target.getBoundingClientRect()
-        setHoverRect({
-          left: rect.left,
-          top: rect.top,
-          width: rect.width,
-          height: rect.height,
-        })
-        setHoverElement(target)
-      } else {
-        setHoverRect(null)
-        setHoverElement(null)
-      }
-    },
-    [document, overlayRef, setHoverElement, setHoverRect]
-  )
-
-  const updateHoverElement = useCallback(
-    (point: Point) => {
-      const target = getTargetElement(point, overlayRef.current, document)
-      setHoverElement(target)
-    },
-    [document, overlayRef, setHoverElement]
-  )
+  const selection = useMesurerPointerSelection({
+    document,
+    window,
+    overlayRef,
+    selectionRectRef,
+    selectedMeasurements,
+    selectedMeasurement,
+    snapEnabled,
+    selectionMode,
+    hoverHighlightEnabled,
+    scrollOffset,
+    textAnnotations,
+    arrows,
+    penStrokes,
+    guides,
+    setSelectedTextIds,
+    setSelectedArrowIds,
+    setSelectedPenStrokeIds,
+    setSelectedGuideIds,
+    setSelectedElement,
+    setSelectedMeasurements,
+    setSelectedMeasurement,
+    setSelectionOriginRect,
+    clearSelectionRect,
+    setActiveMeasurement,
+    setMeasurements,
+  })
 
   const handlePointerDown = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -180,16 +185,7 @@ export const useMesurerPointer = ({
       if (toolMode === "none") return
       clearSelectionRect()
       const point = { x: event.clientX, y: event.clientY }
-      shiftDragRef.current = event.shiftKey
-      shiftToggleElementRef.current = event.shiftKey
-        ? (getSelectedMeasurementHit({
-            point,
-            selectedMeasurements,
-            overlayNode: overlayRef.current,
-            document,
-          })?.elementRef ?? null)
-        : null
-      selectionCacheRef.current.key = ""
+      selection.preparePointerDown(point, event.shiftKey)
 
       if (altPressed && optionPairOverlay) {
         commit()
@@ -229,11 +225,6 @@ export const useMesurerPointer = ({
         return
       }
 
-      if (selectedGuideIds.length > 0) {
-        commit()
-        setSelectedGuideIds([])
-      }
-
       setStart(point)
       setEnd(point)
       setIsDragging(false)
@@ -255,7 +246,6 @@ export const useMesurerPointer = ({
       scheduleGuideDragHold,
       selectNewGuideEnabled,
       selectedGuideIds.length,
-      selectedMeasurements,
       setDraggingGuideId,
       setEnd,
       setGuides,
@@ -264,6 +254,7 @@ export const useMesurerPointer = ({
       setSelectedGuideIds,
       setStart,
       snapGuidesEnabled,
+      selection,
       toolMode,
       toolbarRef,
     ]
@@ -312,15 +303,15 @@ export const useMesurerPointer = ({
         return
       }
 
-      hoverPointRef.current = point
-      if (!hoverFrameRef.current) {
-        hoverFrameRef.current = window.requestAnimationFrame(() => {
-          const latest = hoverPointRef.current
+      hover.hoverPointRef.current = point
+      if (!hover.hoverFrameRef.current) {
+        hover.hoverFrameRef.current = window.requestAnimationFrame(() => {
+          const latest = hover.hoverPointRef.current
           if (latest && !draggingGuideId && !guidesEnabled) {
             if (hoverHighlightEnabled) {
-              updateHoverTarget(latest)
+              hover.updateHoverTarget(latest)
             } else {
-              updateHoverElement(latest)
+              hover.updateHoverElement(latest)
             }
           }
           if (latest && guides.length > 0) {
@@ -349,7 +340,7 @@ export const useMesurerPointer = ({
           } else {
             setGuidePreview(null)
           }
-          hoverFrameRef.current = null
+          hover.hoverFrameRef.current = null
         })
       }
 
@@ -361,7 +352,7 @@ export const useMesurerPointer = ({
       if (!isDragging) {
         const dx = Math.abs(point.x - start.x)
         const dy = Math.abs(point.y - start.y)
-        const threshold = shiftDragRef.current ? 12 : 4
+        const threshold = 4
         if (dx > threshold || dy > threshold) {
           setIsDragging(true)
         }
@@ -387,11 +378,12 @@ export const useMesurerPointer = ({
       setHoverRect,
       setIsDragging,
       snapGuidesEnabled,
+      selectedGuideIds.length,
+      setSelectedGuideIds,
       start,
       toolMode,
       toolbarRef,
-      updateHoverElement,
-      updateHoverTarget,
+      hover,
     ]
   )
 
@@ -425,13 +417,8 @@ export const useMesurerPointer = ({
         setStart(null)
         setEnd(null)
         setIsDragging(false)
-        shiftDragRef.current = false
-        shiftToggleElementRef.current = null
-      }
-
-      const clearTransientMeasurements = () => {
-        setActiveMeasurement(null)
-        setMeasurements([])
+        selection.shiftDragRef.current = false
+        selection.shiftToggleElementRef.current = null
       }
 
       if (event.currentTarget.hasPointerCapture(event.pointerId)) {
@@ -447,195 +434,30 @@ export const useMesurerPointer = ({
         return
       }
 
-      const dragDx = Math.abs(point.x - start.x)
-      const dragDy = Math.abs(point.y - start.y)
-      const shiftThreshold = 12
-      const isShiftClick =
-        event.shiftKey && dragDx <= shiftThreshold && dragDy <= shiftThreshold
-
-      if (isDragging && !isShiftClick) {
-        const selectionRect = getRectFromPoints(start, point)
-        selectionRectRef.current = selectionRect
-        setSelectionOriginRect(selectionRect)
-        const elements = getElementsInRectCached(
-          selectionRect,
-          overlayRef.current,
-          selectionCacheRef.current,
-          document
-        )
-        const hasSameSelection =
-          elements.length === selectedMeasurements.length &&
-          elements.every(
-            (element, index) =>
-              selectedMeasurements[index]?.elementRef === element
-          )
-        const lastElement = elements[elements.length - 1] ?? null
-        const lastChanged =
-          (selectedMeasurement?.elementRef ?? null) !== lastElement
-        if (elements.length > 0) {
-          if (!hasSameSelection) {
-            commit()
-            const nextMeasurements = elements.map((element) => ({
-              ...getInspectMeasurement(element, window),
-              originRect: selectionRect,
-            }))
-            setSelectedMeasurements(nextMeasurements)
-            setSelectedElement(lastElement)
-            setSelectedMeasurement(
-              nextMeasurements[nextMeasurements.length - 1]
-            )
-          } else if (lastChanged) {
-            commit()
-            setSelectedElement(lastElement)
-            const lastMeasurement = selectedMeasurements.find(
-              (measurement) => measurement.elementRef === lastElement
-            )
-            if (lastMeasurement) {
-              setSelectedMeasurement(lastMeasurement)
-            }
-          }
-        } else if (selectedMeasurements.length > 0 || selectedMeasurement) {
-          commit()
-          setSelectedElement(null)
-          setSelectedMeasurement(null)
-          setSelectedMeasurements([])
-          clearSelectionRect()
-        }
-
-        clearTransientMeasurements()
-        resetDragState()
-        return
-      }
-
-      const selectedHit = shiftToggleElementRef.current
-        ? (selectedMeasurements.find(
-            (measurement) =>
-              measurement.elementRef === shiftToggleElementRef.current
-          ) ?? null)
-        : getSelectedMeasurementHit({
-            point,
-            selectedMeasurements,
-            overlayNode: overlayRef.current,
-            document,
-          })
-
-      if (event.shiftKey && selectedHit) {
-        commit()
-        const nextSelected = selectedMeasurements.filter(
-          (measurement) => measurement.elementRef !== selectedHit.elementRef
-        )
-        setSelectedMeasurements(nextSelected)
-        clearSelectionRect()
-        const nextPrimary =
-          nextSelected.length > 0 ? nextSelected[nextSelected.length - 1] : null
-        setSelectedElement(nextPrimary?.elementRef ?? null)
-        setSelectedMeasurement(nextPrimary)
-        clearTransientMeasurements()
-        resetDragState()
-        return
-      }
-
-      if (!hoverHighlightEnabled && !event.shiftKey && selectedHit) {
-        commit()
-        const nextSelected = selectedMeasurements.filter(
-          (measurement) => measurement.elementRef !== selectedHit.elementRef
-        )
-        setSelectedMeasurements(nextSelected)
-        clearSelectionRect()
-        const nextPrimary =
-          nextSelected.length > 0 ? nextSelected[nextSelected.length - 1] : null
-        setSelectedElement(nextPrimary?.elementRef ?? null)
-        setSelectedMeasurement(nextPrimary)
-        clearTransientMeasurements()
-        resetDragState()
-        return
-      }
-
-      const target = event.shiftKey
-        ? (getTargetElement(point, overlayRef.current, document) ??
-          getSnappedClickTarget(point, overlayRef.current, snapEnabled, document))
-        : getSnappedClickTarget(point, overlayRef.current, snapEnabled, document)
-
-      if (target) {
-        const inspectMeasurement = getInspectMeasurement(target, window)
-        clearTransientMeasurements()
-
-        if (event.shiftKey) {
-          const alreadySelected = selectedMeasurements.some(
-            (measurement) => measurement.elementRef === target
-          )
-          if (alreadySelected) {
-            commit()
-            const nextSelected = selectedMeasurements.filter(
-              (measurement) => measurement.elementRef !== target
-            )
-            setSelectedMeasurements(nextSelected)
-            clearSelectionRect()
-            const nextPrimary =
-              nextSelected.length > 0
-                ? nextSelected[nextSelected.length - 1]
-                : null
-            setSelectedElement(nextPrimary?.elementRef ?? null)
-            setSelectedMeasurement(nextPrimary)
-          } else {
-            commit()
-            setSelectedMeasurements((prev) => [...prev, inspectMeasurement])
-            setSelectedElement(target)
-            setSelectedMeasurement(inspectMeasurement)
-            clearSelectionRect()
-          }
-          clearTransientMeasurements()
-          resetDragState()
-          return
-        }
-
-        setSelectedElement(target)
-        commit()
-        setSelectedMeasurements([inspectMeasurement])
-        setSelectedMeasurement(inspectMeasurement)
-        clearSelectionRect()
-      } else {
-        if (event.shiftKey) {
-          clearTransientMeasurements()
-          resetDragState()
-          return
-        }
-
-        commit()
-        setSelectedElement(null)
-        setSelectedMeasurement(null)
-        setSelectedMeasurements([])
-        clearSelectionRect()
-      }
-
-      resetDragState()
+      selection.handleSelectionPointerUp(
+        event,
+        point,
+        start,
+        isDragging,
+        commit,
+        resetDragState,
+      )
     },
     [
       clearGuideDragHold,
-      clearSelectionRect,
       createActionCommit,
       draggingGuideId,
       enabled,
       settingsOpen,
       end,
       guidesEnabled,
-      hoverHighlightEnabled,
       isDragging,
       overlayRef,
-      selectedMeasurement,
-      selectedMeasurements,
-      selectionRectRef,
-      setActiveMeasurement,
       setDraggingGuideId,
       setEnd,
       setIsDragging,
-      setMeasurements,
-      setSelectedElement,
-      setSelectedMeasurement,
-      setSelectedMeasurements,
-      setSelectionOriginRect,
       setStart,
-      snapEnabled,
+      selection,
       start,
       toolMode,
       toolbarRef,
@@ -643,9 +465,9 @@ export const useMesurerPointer = ({
   )
 
   const handlePointerLeave = useCallback(() => {
-    if (hoverFrameRef.current) {
-      window.cancelAnimationFrame(hoverFrameRef.current)
-      hoverFrameRef.current = null
+    if (hover.hoverFrameRef.current) {
+      window.cancelAnimationFrame(hover.hoverFrameRef.current)
+      hover.hoverFrameRef.current = null
     }
     clearGuideDragHold()
     setStart(null)

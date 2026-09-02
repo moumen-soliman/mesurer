@@ -3,6 +3,34 @@ export type Point = {
   y: number
 }
 
+export type Arrow = {
+  id: string
+  start: Point
+  end: Point
+  control?: Point
+  color: string
+  width: number
+  rotation?: number
+}
+
+export type PenStroke = {
+  id: string
+  points: Point[]
+  color: string
+  width: number
+  rotation?: number
+}
+
+export type TextAnnotation = {
+  id: string
+  x: number
+  y: number
+  text: string
+  scale?: number
+  rotation?: number
+  boxWidth?: number
+}
+
 export type Rect = {
   left: number
   top: number
@@ -21,7 +49,7 @@ export type Measurement = {
   id: string
   rect: Rect
   normalizedRect: NormalizedRect
-  elementRef?: HTMLElement | null
+  elementRef?: Element | null
   originRect?: Rect
   deltaX: number
   deltaY: number
@@ -35,6 +63,11 @@ export type BoxEdges = {
   left: number
 }
 
+export type LayoutGap = {
+  row: number
+  column: number
+}
+
 export type InspectMeasurement = {
   id: string
   rect: Rect
@@ -42,8 +75,9 @@ export type InspectMeasurement = {
   marginRect: Rect
   padding: BoxEdges
   margin: BoxEdges
+  gap: LayoutGap | null
   label: string
-  elementRef?: HTMLElement | null
+  elementRef?: Element | null
   originRect?: Rect
 }
 
@@ -59,8 +93,8 @@ export type DistanceOverlay = {
   rectB: Rect
   normalizedRectA: NormalizedRect
   normalizedRectB: NormalizedRect
-  elementRefA?: HTMLElement | null
-  elementRefB?: HTMLElement | null
+  elementRefA?: Element | null
+  elementRefB?: Element | null
   horizontal: {
     x1: number
     x2: number
@@ -83,14 +117,20 @@ export type DistanceOverlay = {
 
 export type OptionTarget = {
   rect: Rect
-  element?: HTMLElement | null
+  element?: Element | null
   guideId?: string
 }
 
 export type ToolMode =
   | "none"
   | "select"
+  | "selection"
   | "guides"
   | "text-inspector"
   | "xray"
   | "rulers"
+  | "arrows"
+  | "pen"
+  | "text"
+
+export type PersistentToolMode = Exclude<ToolMode, "none" | "text-inspector" | "xray" | "rulers">

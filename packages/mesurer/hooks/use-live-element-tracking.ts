@@ -1,5 +1,5 @@
 import type { Dispatch, RefObject, SetStateAction } from "react"
-import { useEffect, useRef } from "react"
+import { useLayoutEffect, useRef } from "react"
 import { getDistanceOverlay } from "../core/distances"
 import { getInspectMeasurement, getRectFromDom } from "../core/dom"
 import { normalizeRect, rectAlmostEqual } from "../core/geometry"
@@ -15,8 +15,8 @@ type LiveParams = {
   window: Window
   enabled: boolean
   selectionEnabled: boolean
-  selectedElementRef: RefObject<HTMLElement | null>
-  hoverElementRef: RefObject<HTMLElement | null>
+  selectedElementRef: RefObject<Element | null>
+  hoverElementRef: RefObject<Element | null>
   setSelectedMeasurement: Dispatch<SetStateAction<InspectMeasurement | null>>
   setSelectedMeasurements: Dispatch<SetStateAction<InspectMeasurement[]>>
   setHoverRect: Dispatch<SetStateAction<Rect | null>>
@@ -30,7 +30,7 @@ export const useLiveElementTracking = (params: LiveParams) => {
   paramsRef.current = params
   const frameRef = useRef<number | null>(null)
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const ownerWindow = params.window
     if (!params.enabled) {
       if (frameRef.current) {
@@ -158,8 +158,8 @@ export const useLiveElementTracking = (params: LiveParams) => {
       }
       frameRef.current = ownerWindow.requestAnimationFrame(tick)
     }
-      frameRef.current = ownerWindow.requestAnimationFrame(tick)
 
+    frameRef.current = ownerWindow.requestAnimationFrame(tick)
     return () => {
       if (frameRef.current) {
         ownerWindow.cancelAnimationFrame(frameRef.current)

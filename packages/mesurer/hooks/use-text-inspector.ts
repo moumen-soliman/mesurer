@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react"
+import { useLayoutEffect, useRef } from "react"
 import type { ToolMode } from "../core/types"
 import {
   createTextInspector,
@@ -8,25 +8,26 @@ import {
 export const useTextInspector = (
   portalTarget: HTMLElement | ShadowRoot,
   toolMode: ToolMode,
+  settingsOpen = false,
 ): TextInspectorAPI => {
   const textInspectorRef = useRef<TextInspectorAPI | null>(null)
   if (!textInspectorRef.current) {
     textInspectorRef.current = createTextInspector({ portalTarget })
   }
   const textInspector = textInspectorRef.current
-
   const modeRef = useRef<ToolMode | null>(null)
-  if (modeRef.current !== toolMode) {
-    const previous = modeRef.current
-    modeRef.current = toolMode
-    if (toolMode === "text-inspector") {
-      textInspector.enable()
-    } else if (previous === "text-inspector") {
-      textInspector.disable()
-    }
-  }
 
-  useEffect(() => {
+  useLayoutEffect(() => {
+    const previous = modeRef.current
+    if (previous !== toolMode) {
+      if (toolMode === "text-inspector") textInspector.enable()
+      else if (previous === "text-inspector") textInspector.disable()
+      modeRef.current = toolMode
+    }
+    textInspector.setPaused(settingsOpen)
+  }, [settingsOpen, textInspector, toolMode])
+
+  useLayoutEffect(() => {
     return () => {
       textInspector.destroy()
     }

@@ -1,6 +1,6 @@
 import {
   useCallback,
-  useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type PointerEvent as ReactPointerEvent,
@@ -61,8 +61,6 @@ export const useScreenshot = ({
   const [active, setActive] = useState(false)
   const [rect, setRect] = useState<ScreenshotRect | null>(null)
 
-  screenshotPreviewUrlRef.current = previewUrl
-
   const flashError = useCallback(() => {
     setError(true)
     if (screenshotErrorTimeoutRef.current !== null) {
@@ -83,6 +81,7 @@ export const useScreenshot = ({
   const dismissPreview = useCallback(() => {
     setPreviewUrl((previous) => {
       if (previous) URL.revokeObjectURL(previous)
+      screenshotPreviewUrlRef.current = null
       return null
     })
   }, [])
@@ -94,7 +93,7 @@ export const useScreenshot = ({
     releaseScreenshotCapture(ownerWindow)
   }, [cancelSelection, dismissPreview, ownerWindow])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     return () => {
       captureOperationRef.current += 1
       if (screenshotErrorTimeoutRef.current !== null) {
@@ -173,6 +172,7 @@ export const useScreenshot = ({
           const nextUrl = URL.createObjectURL(cropped)
           setPreviewUrl((previous) => {
             if (previous) URL.revokeObjectURL(previous)
+            screenshotPreviewUrlRef.current = nextUrl
             return nextUrl
           })
         } catch {

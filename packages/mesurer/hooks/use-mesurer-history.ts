@@ -5,6 +5,9 @@ import type {
   Guide,
   InspectMeasurement,
   Measurement,
+  Arrow,
+  TextAnnotation,
+  PenStroke,
   ToolMode,
 } from "../core/types"
 
@@ -22,6 +25,11 @@ type MesurerSnapshot = {
   guides: Guide[]
   selectedGuideIds: string[]
   draggingGuideId: string | null
+  arrows: Arrow[]
+  selectedArrowIds: string[]
+  textAnnotations: TextAnnotation[]
+  penStrokes: PenStroke[]
+  selectedPenStrokeIds: string[]
 }
 
 type UseMesurerHistoryArgs = {
@@ -57,6 +65,22 @@ type UseMesurerHistoryArgs = {
     draggingGuideId: string | null
     setDraggingGuideId: (value: SetStateAction<string | null>) => void
   }
+  arrows: {
+    arrows: Arrow[]
+    setArrows: (value: SetStateAction<Arrow[]>) => void
+    selectedArrowIds: string[]
+    setSelectedArrowIds: (value: SetStateAction<string[]>) => void
+  }
+  text: {
+    textAnnotations: TextAnnotation[]
+    setTextAnnotations: (value: SetStateAction<TextAnnotation[]>) => void
+  }
+  pen: {
+    penStrokes: PenStroke[]
+    setPenStrokes: (value: SetStateAction<PenStroke[]>) => void
+    selectedPenStrokeIds: string[]
+    setSelectedPenStrokeIds: (value: SetStateAction<string[]>) => void
+  }
   transient: {
     setStart: (value: SetStateAction<{ x: number; y: number } | null>) => void
     setEnd: (value: SetStateAction<{ x: number; y: number } | null>) => void
@@ -75,8 +99,8 @@ type UseMesurerHistoryArgs = {
         height: number
       } | null>
     ) => void
-    setHoverElement: (value: HTMLElement | null) => void
-    setSelectedElement: (value: HTMLElement | null) => void
+    setHoverElement: (value: Element | null) => void
+    setSelectedElement: (value: Element | null) => void
     clearSelectionRect: () => void
   }
 }
@@ -87,6 +111,9 @@ export const useMesurerHistory = ({
   toggles,
   measurements,
   guides,
+  arrows,
+  text,
+  pen,
   transient,
 }: UseMesurerHistoryArgs) => {
   const {
@@ -127,6 +154,9 @@ export const useMesurerHistory = ({
     setSelectedElement,
     clearSelectionRect,
   } = transient
+  const { arrows: arrowEntries, setArrows, selectedArrowIds, setSelectedArrowIds } = arrows
+  const { textAnnotations, setTextAnnotations } = text
+  const { penStrokes, setPenStrokes, selectedPenStrokeIds, setSelectedPenStrokeIds } = pen
 
   const historyRef = useRef<MesurerSnapshot[]>([])
   const futureRef = useRef<MesurerSnapshot[]>([])
@@ -145,6 +175,11 @@ export const useMesurerHistory = ({
       guides: [...guideEntries],
       selectedGuideIds: [...selectedGuideIds],
       draggingGuideId,
+      arrows: [...arrowEntries],
+      selectedArrowIds: [...selectedArrowIds],
+      textAnnotations: [...textAnnotations],
+      penStrokes: [...penStrokes],
+      selectedPenStrokeIds: [...selectedPenStrokeIds],
     }
   }, [
     activeMeasurement,
@@ -158,6 +193,11 @@ export const useMesurerHistory = ({
     selectedMeasurement,
     selectedMeasurements,
     toolMode,
+    arrowEntries,
+    selectedArrowIds,
+    textAnnotations,
+    penStrokes,
+    selectedPenStrokeIds,
   ])
 
   const getSnapshotSignature = useCallback((snapshot: MesurerSnapshot) => {
@@ -188,6 +228,11 @@ export const useMesurerHistory = ({
       snapshot.guides.map((item) => `${item.id}:${item.position}`).join(","),
       snapshot.selectedGuideIds.join(","),
       snapshot.draggingGuideId ?? "",
+      snapshot.arrows.map((arrow) => `${arrow.id}:${arrow.start.x},${arrow.start.y},${arrow.control?.x ?? ""},${arrow.control?.y ?? ""},${arrow.end.x},${arrow.end.y}`).join(","),
+      snapshot.selectedArrowIds.join(","),
+      snapshot.textAnnotations.map((item) => `${item.id}:${item.x},${item.y},${item.scale ?? ""},${item.rotation ?? ""},${item.boxWidth ?? ""}:${item.text}`).join(","),
+      snapshot.penStrokes.map((stroke) => `${stroke.id}:${stroke.rotation ?? ""}:${stroke.points.map((point) => `${point.x},${point.y}`).join(";")}`).join(","),
+      snapshot.selectedPenStrokeIds.join(","),
     ].join("|")
   }, [])
 
@@ -216,6 +261,11 @@ export const useMesurerHistory = ({
       setGuides(snapshot.guides)
       setSelectedGuideIds(snapshot.selectedGuideIds)
       setDraggingGuideId(snapshot.draggingGuideId)
+      setArrows(snapshot.arrows)
+      setSelectedArrowIds(snapshot.selectedArrowIds)
+      setTextAnnotations(snapshot.textAnnotations)
+      setPenStrokes(snapshot.penStrokes)
+      setSelectedPenStrokeIds(snapshot.selectedPenStrokeIds)
       setStart(null)
       setEnd(null)
       setIsDragging(false)
@@ -250,6 +300,11 @@ export const useMesurerHistory = ({
       setStart,
       setToolMode,
       setHoverElement,
+      setArrows,
+      setSelectedArrowIds,
+      setTextAnnotations,
+      setPenStrokes,
+      setSelectedPenStrokeIds,
     ]
   )
 
