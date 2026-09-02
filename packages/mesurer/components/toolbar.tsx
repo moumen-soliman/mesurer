@@ -11,7 +11,9 @@ import {
 } from "react";
 import type { ToolMode } from "../core/types";
 import { cn } from "../core/utils";
+import { toolbarMotionMs } from "../core/toolbar-motion";
 import { useToolbarDrag } from "../hooks/use-toolbar-drag";
+import { useToolbarGroupMotion } from "../hooks/use-toolbar-group-motion";
 import { useToolbarTooltip } from "../hooks/use-toolbar-tooltip";
 import { useSettingsMenuPlacement } from "../hooks/use-settings-menu-placement";
 import { ScreenshotPreview } from "./screenshot-preview";
@@ -85,14 +87,7 @@ const GUIDE_MENU_WIDTH = 176;
 const VIEWPORT_PADDING = 8;
 const TOOLBAR_HEIGHT = 40;
 const TOOLTIP_HEIGHT_WITH_GAP = 34;
-const TOOLBAR_MOTION_FALLBACK_MS = 200;
 
-const toolbarMotionMs = (motion: string) => {
-  const value = Number.parseFloat(motion);
-  if (!Number.isFinite(value)) return TOOLBAR_MOTION_FALLBACK_MS;
-  const unit = motion.trim().match(/[\d.]+(m?s)/i)?.[1];
-  return unit?.toLowerCase() === "s" ? value * 1000 : value;
-};
 const getSettingsShortcut = (eventTarget: Window) =>
   /Mac|iPhone|iPad|iPod/.test(eventTarget.navigator.platform)
     ? "⌘ ,"
@@ -305,9 +300,13 @@ function ToolbarComponent(
   const annotatePanelRef = useRef<HTMLDivElement | null>(null);
   const motionRef = useRef<HTMLDivElement | null>(null);
   const trailingRef = useRef<HTMLDivElement | null>(null);
-  const barWidthRef = useRef(0);
-  const motionReadyRef = useRef(false);
-  const motionGroupRef = useRef(toolGroup);
+  const { markReady: markToolbarMotionReady } = useToolbarGroupMotion({
+    eventTarget,
+    toolGroup,
+    motionRef,
+    stageRef: toolStageRef,
+    trailingRef,
+  });
   const previousToolGroupRef = useRef(toolGroup);
   const previousExclusiveToolIdRef = useRef<string | null>(
     exclusiveToolId(toolMode, colorPickerActive),
@@ -361,110 +360,6 @@ function ToolbarComponent(
       setToolGroup(fromMode);
     }
   }, [colorPickerActive, rulersVisible, toolMode, xrayVisible]);
-
-  useLayoutEffect(() => {
-    const motion = motionRef.current;
-    const chrome = motion?.querySelector(".mesurer-toolbar-chrome");
-    const surface = motion?.querySelector(".mesurer-toolbar-surface");
-    const stage = toolStageRef.current;
-    const track = stage?.querySelector(".mesurer-toolbar-tool-track");
-    const trailing = trailingRef.current;
-    if (
-      !motion ||
-      !(chrome instanceof HTMLElement) ||
-      !(surface instanceof HTMLElement) ||
-      !stage ||
-      !(track instanceof HTMLElement) ||
-      !trailing
-    ) {
-      return;
-    }
-
-    const toWidth = motion.offsetWidth;
-    const fromWidth = barWidthRef.current;
-    const fromGroup = motionGroupRef.current;
-
-    if (!motionReadyRef.current || fromGroup === toolGroup) {
-      barWidthRef.current = toWidth;
-      motionGroupRef.current = toolGroup;
-      return;
-    }
-    if (eventTarget.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      barWidthRef.current = toWidth;
-      motionGroupRef.current = toolGroup;
-      return;
-    }
-    if (fromWidth < 1 || toWidth < 1) {
-      barWidthRef.current = toWidth;
-      motionGroupRef.current = toolGroup;
-      return;
-    }
-
-    const inspectWidth =
-      parseFloat(stage.style.getPropertyValue("--msr-inspect-w")) || 0;
-    const fromX = fromGroup === "annotate" ? -inspectWidth : 0;
-    const toX = toolGroup === "annotate" ? -inspectWidth : 0;
-    const scale = fromWidth / toWidth;
-    const trailX = fromWidth - toWidth;
-    const growBy = Math.max(0, toWidth - fromWidth);
-    const motionTiming =
-      getComputedStyle(motion).getPropertyValue("--msr-toolbar-motion").trim() ||
-      `${TOOLBAR_MOTION_FALLBACK_MS}ms ease`;
-    const transformMotion = `transform ${motionTiming}`;
-    const widthChanged = Math.abs(fromWidth - toWidth) > 0.5;
-    const clipFrom = `inset(0 ${growBy}px 0 0)`;
-    const clipTo = "inset(0)";
-
-    const nodes = [chrome, track, trailing];
-    for (const node of nodes) {
-      node.style.transition = "none";
-    }
-    surface.style.transition = "none";
-    if (widthChanged) {
-      motion.dataset.resizing = "true";
-      chrome.style.transform = `scaleX(${scale})`;
-      trailing.style.transform = `translateX(${trailX}px)`;
-      if (growBy > 0) {
-        surface.style.clipPath = clipFrom;
-      }
-    }
-    track.style.transform = `translateX(${fromX}px)`;
-    void motion.offsetWidth;
-
-    for (const node of nodes) {
-      node.style.transition = transformMotion;
-    }
-    chrome.style.transform = "scaleX(1)";
-    trailing.style.transform = "translateX(0)";
-    track.style.transform = `translateX(${toX}px)`;
-    if (growBy > 0) {
-      surface.style.transition = `clip-path ${motionTiming}`;
-      surface.style.clipPath = clipTo;
-    }
-
-    let finished = false;
-    const finish = () => {
-      if (finished) return;
-      finished = true;
-      barWidthRef.current = toWidth;
-      motionGroupRef.current = toolGroup;
-      delete motion.dataset.resizing;
-      for (const node of nodes) {
-        node.style.transition = "";
-        node.style.transform = "";
-      }
-      surface.style.transition = "";
-      surface.style.clipPath = "";
-    };
-    const timeout = eventTarget.setTimeout(
-      finish,
-      toolbarMotionMs(motionTiming) + 32,
-    );
-    return () => {
-      eventTarget.clearTimeout(timeout);
-      if (!motion.isConnected) finish();
-    };
-  }, [eventTarget, toolGroup]);
 
   useLayoutEffect(() => {
     const exclusiveId = exclusiveToolId(toolMode, colorPickerActive);
@@ -731,12 +626,7 @@ function ToolbarComponent(
     syncToolWidths();
     const frame = requestAnimationFrame(() => {
       stage.dataset.ready = "true";
-      motionReadyRef.current = true;
-      const motion = motionRef.current;
-      if (motion) {
-        motion.dataset.ready = "true";
-        barWidthRef.current = motion.offsetWidth;
-      }
+      markToolbarMotionReady();
     });
     const observer = new ResizeObserver(syncToolWidths);
     observer.observe(inspectPanel);
@@ -745,7 +635,7 @@ function ToolbarComponent(
       cancelAnimationFrame(frame);
       observer.disconnect();
     };
-  }, []);
+  }, [markToolbarMotionReady]);
 
   useLayoutEffect(() => {
     if (!guideMenuOpen && !settingsOpen) return;
