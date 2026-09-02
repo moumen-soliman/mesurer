@@ -1,8 +1,11 @@
 import { useState } from "react";
 import { createRoot } from "react-dom/client";
 
+const stealPagePrompt = new URLSearchParams(location.search).has("prompt");
+
 function Fixture() {
   const [clicks, setClicks] = useState(0);
+  const [promptValue, setPromptValue] = useState("");
 
   return (
     <>
@@ -76,6 +79,23 @@ function Fixture() {
         Secondary app button
       </button>
       <output data-testid="underlying-click-count">{clicks}</output>
+      {stealPagePrompt ? (
+        <textarea
+          data-testid="page-prompt"
+          aria-label="Page prompt"
+          autoFocus
+          value={promptValue}
+          onChange={(event) => setPromptValue(event.target.value)}
+          onBlur={(event) => event.currentTarget.focus()}
+          style={{
+            position: "absolute",
+            left: 40,
+            top: 40,
+            width: 280,
+            height: 48,
+          }}
+        />
+      ) : null}
       <svg
         data-testid="svg-target"
         viewBox="0 0 240 120"

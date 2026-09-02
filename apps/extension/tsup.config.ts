@@ -5,6 +5,7 @@ export default defineConfig({
     background: "src/background.ts",
     content: "src/content.tsx",
     "capture-bridge": "src/capture-bridge.ts",
+    "keyboard-gate": "src/keyboard-gate.ts",
   },
   outDir: "dist",
   format: ["iife"],

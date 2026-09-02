@@ -450,14 +450,6 @@ export function MesurerClient({
       ownerWindow.removeEventListener("resize", updateScrollOffset);
     };
   }, [ownerWindow]);
-  useLayoutEffect(() => {
-    if (!enabled || toolMode === "none") return;
-    const root = overlayRef.current;
-    if (!root) return;
-    const active = ownerDocument.activeElement;
-    if (active instanceof HTMLIFrameElement) active.blur();
-    root.focus({ preventScroll: true });
-  }, [enabled, ownerDocument, overlayRef, toolMode]);
   enabledRef.current = enabled;
   xrayVisibleRef.current = xrayVisible;
   toolModeRef.current = toolMode;

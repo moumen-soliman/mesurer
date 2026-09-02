@@ -10,6 +10,7 @@ import { Tooltip, useTooltip } from "./tooltip"
 import type { GuideStyle, RulerSettings, ScreenshotSettings } from "../core/persistence"
 import { TEXT_FONT_OPTIONS, type TextFont, type TextStyleSettings } from "../core/text-style"
 import type { ToolMode } from "../core/types"
+import { getReleaseChannel } from "../core/extension-install"
 
 export type SettingsFocusSection =
   | "guides"
@@ -610,6 +611,7 @@ export function SettingsPanel({
   focusSection,
   general,
 }: SettingsPanelProps) {
+  const releaseChannel = getReleaseChannel()
   const { persistOnReload, setPersistOnReload, onResetSettings, onClearWorkspace } = general
   const { settings: screenshotSettings, setSettings: setScreenshotSettings } = camera
   const { settings: rulerSettings, setSettings: setRulerSettings } = rulers
@@ -839,7 +841,9 @@ export function SettingsPanel({
         <div className="msr:col-span-2"><SettingsSwitch label="Persist" checked={persistOnReload} onChange={setPersistOnReload} /></div>
         <div className={`msr:col-span-2 msr:grid msr:h-8 ${SETTINGS_COLUMNS} msr:items-center msr:gap-0 msr:text-[12px] msr:text-ink-700`}>
           <span>Version</span>
-          <span className="msr:justify-self-end msr:font-mono msr:text-[11px] msr:tabular-nums msr:text-ink-700">{packageManifest.version}</span>
+          <span className="msr:justify-self-end msr:font-mono msr:text-[11px] msr:tabular-nums msr:text-ink-700">
+            {releaseChannel ? `${releaseChannel} ${packageManifest.version}` : packageManifest.version}
+          </span>
         </div>
         <div className="msr:col-span-2 msr:flex msr:h-8 msr:w-full msr:justify-end msr:gap-1">
           <button

@@ -16,6 +16,16 @@
         "http://127.0.0.1/*",
         "https://mesurer.dev/*"
       ],
+      "js": ["keyboard-gate.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "http://localhost/*",
+        "http://127.0.0.1/*",
+        "https://mesurer.dev/*"
+      ],
       "js": ["capture-bridge.js"],
       "run_at": "document_start"
     }

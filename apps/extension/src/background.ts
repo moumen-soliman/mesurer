@@ -1,13 +1,22 @@
 import { CAPTURE_VISIBLE_MESSAGE } from "./messages";
 
 chrome.action.onClicked.addListener((tab) => {
-  if (!tab.id) return;
+  if (typeof tab.id !== "number") return
+  const tabId: number = tab.id
 
   chrome.scripting
     .executeScript({
-      target: { tabId: tab.id },
-      files: ["content.js"],
+      target: { tabId },
+      world: "MAIN",
+      injectImmediately: true,
+      files: ["keyboard-gate.js"],
     })
+    .then(() =>
+      chrome.scripting.executeScript({
+        target: { tabId },
+        files: ["content.js"],
+      }),
+    )
     .catch((error) => {
       console.error("Mesurer failed to inject", error);
     });

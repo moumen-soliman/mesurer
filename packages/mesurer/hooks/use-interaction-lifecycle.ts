@@ -12,6 +12,7 @@ import type {
 } from "../core/types";
 import type { TextDraft } from "./use-annotation-callbacks";
 import { useHotkeys } from "./use-hotkeys";
+import { useOverlayKeyboard } from "./use-overlay-keyboard";
 
 type Options = {
   enabled: boolean;
@@ -192,6 +193,15 @@ export const useInteractionLifecycle = (options: Options) => {
     options.setToolMode("none");
   }, [clearTransientState, options]);
 
+  const overlayActive =
+    options.enabled && (options.toolMode !== "none" || options.toolbarActive);
+
+  useOverlayKeyboard({
+    eventTarget: options.ownerWindow,
+    overlayRef: options.overlayRef,
+    overlayActive,
+  });
+
   useHotkeys({
     eventTarget: options.ownerWindow,
     overlayRef: options.overlayRef,
@@ -212,8 +222,7 @@ export const useInteractionLifecycle = (options: Options) => {
     setXrayVisible: options.setXrayVisible,
     setRulersVisible: options.setRulersVisible,
     setAltPressed: options.setAltPressed,
-    isOverlayActive: () =>
-      options.enabled && (options.toolMode !== "none" || options.toolbarActive),
+    isOverlayActive: () => overlayActive,
     setGuideOrientation: options.setGuideOrientation,
     onInteract: options.onInteract,
     onColorPicker: () => {

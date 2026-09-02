@@ -1,5 +1,10 @@
 import type { Dispatch, SetStateAction } from "react"
 import { useLayoutEffect, useRef } from "react"
+import {
+  isOverlayEscapeConsumed,
+  isTypingInMesurer,
+  isTypingInPage,
+} from "../core/keyboard-ownership"
 import type { ToolMode } from "../core/types"
 
 const DOUBLE_ESCAPE_MS = 400
@@ -39,55 +44,15 @@ type HotkeyOptions = {
   isColorPickerActive: () => boolean
 }
 
-const isEditableElement = (node: EventTarget | null) => {
-  if (!(node instanceof Element)) return false
-  const element = node as HTMLElement
-  const tag = element.tagName
-  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true
-  if (element.isContentEditable) return true
-  const editable = element.getAttribute("contenteditable")
-  return editable !== null && editable !== "false"
-}
-
-const getDeepActiveElement = (eventTarget: Window) => {
-  let active: Element | null = eventTarget.document.activeElement
-  while (active?.shadowRoot?.activeElement) {
-    active = active.shadowRoot.activeElement
+const attachCapture = (
+  roots: EventTarget[],
+  type: string,
+  listener: EventListener,
+) => {
+  for (const root of roots) root.addEventListener(type, listener, true)
+  return () => {
+    for (const root of roots) root.removeEventListener(type, listener, true)
   }
-  return active
-}
-
-const isInsideMesurer = (node: EventTarget | null) => {
-  if (!(node instanceof Node)) return false
-  let current: Node | null = node
-  while (current) {
-    if (current instanceof Element && current.classList.contains("mesurer-root")) {
-      return true
-    }
-    const parent: Node | null = current.parentNode
-    current = parent instanceof ShadowRoot ? parent.host : parent
-  }
-  return false
-}
-
-const isTypingInMesurer = (event: KeyboardEvent, eventTarget: Window) => {
-  const active = getDeepActiveElement(eventTarget)
-  if (isEditableElement(active) && isInsideMesurer(active)) return true
-  return event.composedPath().some(
-    (node) => isEditableElement(node) && isInsideMesurer(node),
-  )
-}
-
-const isOverlayEscapeConsumed = (event: KeyboardEvent) =>
-  event.composedPath().some((node) => {
-    if (!(node instanceof Element)) return false
-    const role = node.getAttribute("role")
-    return role === "menu" || role === "listbox"
-  })
-
-const isTypingInPage = (eventTarget: Window) => {
-  const active = getDeepActiveElement(eventTarget)
-  return isEditableElement(active) && !isInsideMesurer(active)
 }
 
 export const useHotkeys = (options: HotkeyOptions) => {
@@ -162,7 +127,7 @@ export const useHotkeys = (options: HotkeyOptions) => {
         return
       }
 
-      if (isTypingInPage(target)) return
+      if (!current.isOverlayActive() && isTypingInPage(target)) return
 
       if (hasPrimaryModifier) {
         if (event.key === ",") {
@@ -312,15 +277,11 @@ export const useHotkeys = (options: HotkeyOptions) => {
     const overlayRoot = options.overlayRef.current?.getRootNode()
     if (overlayRoot && overlayRoot !== target.document) roots.push(overlayRoot)
 
-    for (const root of roots) {
-      root.addEventListener("keydown", handleKeyDown as EventListener, true)
-      root.addEventListener("keyup", handleKeyUp as EventListener, true)
-    }
+    const detachKeyDown = attachCapture(roots, "keydown", handleKeyDown as EventListener)
+    const detachKeyUp = attachCapture(roots, "keyup", handleKeyUp as EventListener)
     return () => {
-      for (const root of roots) {
-        root.removeEventListener("keydown", handleKeyDown as EventListener, true)
-        root.removeEventListener("keyup", handleKeyUp as EventListener, true)
-      }
+      detachKeyDown()
+      detachKeyUp()
     }
-  }, [options.eventTarget, options.overlayRef, options.enabled])
+  }, [options.enabled, options.eventTarget, options.overlayRef])
 }

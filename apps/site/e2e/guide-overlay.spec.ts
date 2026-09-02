@@ -971,3 +971,28 @@ test("cycles through nested elements on repeated clicks", async ({ page }) => {
   await page.mouse.click(x, y);
   await expect(page.locator("[data-mesurer-selected-measurement]")).toContainText("200 x 120");
 });
+
+test("toolbar shortcuts win over a page prompt that owns typing", async ({ page }) => {
+  await page.goto("/e2e/fixtures/guide-overlay.html?prompt");
+  const prompt = page.getByTestId("page-prompt");
+  await expect(prompt).toBeVisible();
+  await expect(page.getByRole("button", { name: "Inspect (I)" })).toBeVisible();
+
+  await page.keyboard.press("2");
+  await expect(page.locator(".mesurer-toolbar-tool-switch")).toHaveAttribute(
+    "data-value",
+    "annotate",
+  );
+  await expect(prompt).toHaveValue("");
+
+  await page.keyboard.press("t");
+  await expect(page.getByRole("button", { name: "Text (T)" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await page.mouse.click(220, 180);
+  const editor = page.getByRole("textbox", { name: "Text annotation" });
+  await editor.pressSequentially("Hello from Mesurer");
+  await expect(editor).toHaveText("Hello from Mesurer");
+  await expect(prompt).toHaveValue("");
+});
