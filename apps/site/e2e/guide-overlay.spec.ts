@@ -26,6 +26,20 @@ test("does not run shortcuts while typing in a page field", async ({ page }) => 
   );
 });
 
+test("programmatic page focus releases Mesurer keyboard ownership", async ({ page }) => {
+  await page.goto("/e2e/fixtures/guide-overlay.html");
+  await page.getByRole("button", { name: "Inspect (I)" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-mesurer-kb", "1");
+
+  const field = page.getByLabel("Page field");
+  await field.evaluate((element) => (element as HTMLInputElement).focus());
+
+  await expect(field).toBeFocused();
+  await expect(page.locator("html")).not.toHaveAttribute("data-mesurer-kb");
+  await field.pressSequentially("Programmatic focus works");
+  await expect(field).toHaveValue("Programmatic focus works");
+});
+
 test("Escape exits the tool without stealing focus from a page field", async ({
   page,
 }) => {

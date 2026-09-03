@@ -30,6 +30,12 @@ test("extension keyboard gate isolates Mesurer and bridges page-editor shortcuts
       editorEvents: 0,
       bridgedEvents: 0,
     };
+    document.addEventListener("keydown", () => {
+      state.pageListenerEvents += 1;
+    });
+    document.addEventListener("input", () => {
+      state.pageInputEvents += 1;
+    });
     editor.addEventListener("keydown", () => {
       state.editorEvents += 1;
     });
@@ -43,17 +49,24 @@ test("extension keyboard gate isolates Mesurer and bridges page-editor shortcuts
     const state = (window as Window & { __gateState: Record<string, number> }).__gateState;
     const editor = (window as Window & { __gateEditor: HTMLElement }).__gateEditor;
     const prompt = (window as Window & { __gatePrompt: HTMLTextAreaElement }).__gatePrompt;
-    document.addEventListener("keydown", () => {
-      state.pageListenerEvents += 1;
-    });
-    document.addEventListener("input", () => {
-      state.pageInputEvents += 1;
-    });
     window.addEventListener("message", (event) => {
       if (event.data?.type === "__MESURER_KEYBOARD_BRIDGE__") state.bridgedEvents += 1;
     });
 
     document.documentElement.setAttribute("data-mesurer-kb", "1");
+    const toolbar = document.createElement("button");
+    toolbar.type = "button";
+    toolbar.className = "mesurer-root";
+    document.body.append(toolbar);
+    toolbar.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        bubbles: true,
+        composed: true,
+        key: "t",
+        code: "KeyT",
+      }),
+    );
+    const afterToolbar = { ...state };
     editor.focus();
     editor.dispatchEvent(
       new KeyboardEvent("keydown", {
@@ -109,6 +122,7 @@ test("extension keyboard gate isolates Mesurer and bridges page-editor shortcuts
 
     return {
       owned,
+      afterToolbar,
       bridgedEvents: state.bridgedEvents,
       pageInputEvents: state.pageInputEvents,
       releasedPageListenerEvents: state.pageListenerEvents,
@@ -116,8 +130,9 @@ test("extension keyboard gate isolates Mesurer and bridges page-editor shortcuts
   });
 
   expect(result.owned.editorEvents).toBe(1);
-  expect(result.owned.pageListenerEvents).toBe(0);
+  expect(result.afterToolbar.pageListenerEvents).toBe(0);
+  expect(result.owned.pageListenerEvents).toBe(1);
   expect(result.pageInputEvents).toBe(0);
-  expect(result.bridgedEvents).toBe(2);
-  expect(result.releasedPageListenerEvents).toBe(1);
+  expect(result.bridgedEvents).toBe(3);
+  expect(result.releasedPageListenerEvents).toBe(2);
 });

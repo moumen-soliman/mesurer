@@ -4,6 +4,7 @@ import {
   isMesurerKeyboardBridgeKey,
   isMesurerKeyboardEvent,
   isMesurerUiNode,
+  isTypingInMesurer,
   MESURER_KEYBOARD_BRIDGE,
   MESURER_KEYBOARD_ATTR,
 } from "./keyboard-ownership"
@@ -45,13 +46,36 @@ export const installKeyboardGate = (
   gated[INSTALLED] = true
 
   const blockPageKey = (event: Event) => {
-    if (
-      !ownsKeyboard(view) ||
-      isMesurerKeyboardEvent(event, view) ||
-      isInsideMesurer(event.target)
-    ) {
+    if (!ownsKeyboard(view)) {
       return
     }
+    const mesurerEvent = isMesurerKeyboardEvent(event, view)
+    if (mesurerEvent) {
+      if (!isolateMesurerEvents || isTypingInMesurer(event as KeyboardEvent, view)) {
+        return
+      }
+      if (event instanceof KeyboardEvent && isMesurerKeyboardBridgeKey(event.key, event)) {
+        view.postMessage(
+          {
+            type: MESURER_KEYBOARD_BRIDGE,
+            eventType: event.type,
+            key: event.key,
+            code: event.code,
+            location: event.location,
+            repeat: event.repeat,
+            altKey: event.altKey,
+            ctrlKey: event.ctrlKey,
+            metaKey: event.metaKey,
+            shiftKey: event.shiftKey,
+          },
+          view.location.origin === "null" ? "*" : view.location.origin,
+        )
+      }
+      event.preventDefault()
+      event.stopImmediatePropagation()
+      return
+    }
+    if (isInsideMesurer(event.target)) return
     if (event instanceof KeyboardEvent) {
       if (isBrowserReservedChord(event)) return
       if (event.type === "keydown" || event.type === "keyup") {
@@ -85,6 +109,10 @@ export const installKeyboardGate = (
       isMesurerKeyboardEvent(event, view) ||
       isInsideMesurer(event.target)
     ) {
+      return
+    }
+    if (event.type === "focus" || event.type === "focusin") {
+      view.document.documentElement.removeAttribute(MESURER_KEYBOARD_ATTR)
       return
     }
     if (isolateMesurerEvents) event.stopImmediatePropagation()
