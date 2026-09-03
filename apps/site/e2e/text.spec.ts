@@ -417,6 +417,21 @@ test("deletes a selected text annotation with Backspace", async ({ page }) => {
   await expect(textItems(page)).toHaveText("Remove me");
 });
 
+test("deletes selected text with Backspace after a page editor had focus", async ({ page }) => {
+  await page.goto("/e2e/fixtures/guide-overlay.html?prompt");
+  const prompt = page.getByTestId("page-prompt");
+  await prompt.focus();
+  await activateText(page);
+  await page.mouse.click(220, 180);
+  const input = page.getByRole("textbox", { name: "Text annotation" });
+  await input.fill("Remove me");
+  await page.keyboard.press("Escape");
+
+  await expect(textItems(page)).toHaveCount(1);
+  await page.keyboard.press("Backspace");
+  await expect(textItems(page)).toHaveCount(0);
+});
+
 test("rotates a selected text annotation", async ({ page }) => {
   await page.goto("/e2e/fixtures/guide-overlay.html");
   await activateText(page);

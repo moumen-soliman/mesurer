@@ -77,7 +77,12 @@ export const useHotkeys = (options: HotkeyOptions) => {
       if (seen.has(event)) return
       seen.add(event)
       const current = optionsRef.current
-      if (!bridged && isMesurerKeyboardOwned(target) && isTypingInPage(target)) return
+      if (
+        !bridged &&
+        isTypingInPage(target) &&
+        !isMesurerKeyboardOwned(target) &&
+        !isEscapeKey(event)
+      ) return
       if (isEscapeKey(event)) {
         if (event.repeat) return
         if (current.minimized) return
@@ -301,7 +306,7 @@ export const useHotkeys = (options: HotkeyOptions) => {
     }
 
     const handleKeyUp = (event: KeyboardEvent, bridged = false) => {
-      if (!bridged && isMesurerKeyboardOwned(target) && isTypingInPage(target)) return
+      if (!bridged && isTypingInPage(target) && !isMesurerKeyboardOwned(target)) return
       if (event.key === "Alt") {
         optionsRef.current.setAltPressed(false)
       }
