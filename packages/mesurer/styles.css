@@ -109,15 +109,28 @@
   transform-origin: 0 50%;
 }
 
+.mesurer-toolbar-divider {
+  flex: none;
+  width: 1px;
+  align-self: stretch;
+  margin-block: -4px;
+  background: var(--color-ink-200);
+}
+
 .mesurer-toolbar-minimize-stage {
   flex: none;
   min-width: 0;
   width: var(--msr-expanded-w, auto);
-  overflow: hidden;
+  overflow: visible;
 }
 
 .mesurer-toolbar-minimize-stage[data-minimized="true"] {
   width: var(--msr-icon-w, auto);
+  overflow: hidden;
+}
+
+.mesurer-toolbar-motion[data-resizing="collapse"] .mesurer-toolbar-minimize-stage {
+  overflow: hidden;
 }
 
 .mesurer-toolbar-minimize-stage[data-minimized="true"] .mesurer-toolbar-minimize-track {

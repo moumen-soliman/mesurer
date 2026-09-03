@@ -230,7 +230,7 @@ function ToolbarDivider() {
   return (
     <div
       aria-hidden="true"
-      className="msr:-my-1 msr:w-px msr:self-stretch msr:bg-ink-200"
+      className="mesurer-toolbar-divider"
     />
   );
 }
@@ -754,7 +754,7 @@ function ToolbarComponent(
          aria-hidden={minimized}
          inert={minimized ? true : undefined}
        >
-       <div ref={expandedPanelRef} className="msr:flex msr:w-max msr:items-center msr:gap-1">
+       <div ref={expandedPanelRef} className="msr:flex msr:w-max msr:items-stretch msr:gap-1">
        <ToolGroupSwitch
          value={toolGroup}
          onChange={selectToolGroup}
@@ -762,7 +762,7 @@ function ToolbarComponent(
          tooltipVisibleId={visibleTooltipId}
          tooltipsEnabled={tooltipsEnabled}
        />
-       <div className="msr:flex msr:items-center msr:self-stretch">
+       <div className="msr:flex msr:items-stretch">
        <ToolbarDivider />
        <div
          ref={toolStageRef}
@@ -1031,7 +1031,7 @@ function ToolbarComponent(
        </div>
        </div>
        </div>
-       <div ref={trailingRef} className="mesurer-toolbar-trailing msr:flex msr:items-center">
+       <div ref={trailingRef} className="mesurer-toolbar-trailing msr:flex msr:items-stretch">
        <ToolbarDivider />
        <ToolbarGroup label="Capture and settings" className="msr:px-1">
       <div className="msr:relative">
