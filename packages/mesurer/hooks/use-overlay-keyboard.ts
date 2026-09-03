@@ -32,11 +32,9 @@ export const useOverlayKeyboard = ({
         setMesurerKeyboardOwned(eventTarget.document, true)
         return
       }
-      if (active instanceof Element && isEditableElement(active)) {
-        if (pageEditorPointerRef.current || !claimedRef.current) {
-          claimedRef.current = false
-          setMesurerKeyboardOwned(eventTarget.document, false)
-        }
+      if (active instanceof Element && !isInsideMesurer(active)) {
+        claimedRef.current = false
+        setMesurerKeyboardOwned(eventTarget.document, false)
         pageEditorPointerRef.current = false
         return
       }
@@ -58,7 +56,10 @@ export const useOverlayKeyboard = ({
       if (path.some((node) => isMesurerUiNode(node))) {
         claimedRef.current = true
         setMesurerKeyboardOwned(eventTarget.document, true)
+        return
       }
+      claimedRef.current = false
+      setMesurerKeyboardOwned(eventTarget.document, false)
     }
     eventTarget.document.addEventListener("focusin", onFocusIn, true)
     eventTarget.document.addEventListener("pointerdown", onPointerDown, true)

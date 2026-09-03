@@ -9,7 +9,7 @@ export default defineConfig({
   },
   webServer: {
     command:
-      "pnpm --dir ../../packages/mesurer build && pnpm exec vite --host 127.0.0.1 --port 4173",
+      "pnpm --dir ../extension build && pnpm exec vite --host 127.0.0.1 --port 4173",
     url: "http://127.0.0.1:4173/e2e/fixtures/guide-overlay.html",
     reuseExistingServer: true,
   },

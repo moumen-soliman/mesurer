@@ -33,6 +33,8 @@ const MESURER_BRIDGED_KEYS = new Set([
   "x",
 ])
 
+const MESURER_MODIFIED_KEYS = new Set([",", "a", "z"])
+
 export const isMesurerKeyboardBridgeKey = (
   key: string,
   modifiers: Pick<
@@ -40,11 +42,14 @@ export const isMesurerKeyboardBridgeKey = (
     "altKey" | "ctrlKey" | "metaKey" | "shiftKey"
   >,
 ) =>
-  MESURER_BRIDGED_KEYS.has(key.toLowerCase()) &&
   !modifiers.altKey &&
-  !modifiers.ctrlKey &&
-  !modifiers.metaKey &&
-  !modifiers.shiftKey
+  ((MESURER_BRIDGED_KEYS.has(key.toLowerCase()) &&
+    !modifiers.ctrlKey &&
+    !modifiers.metaKey &&
+    !modifiers.shiftKey) ||
+    (MESURER_MODIFIED_KEYS.has(key.toLowerCase()) &&
+      (modifiers.ctrlKey || modifiers.metaKey) &&
+      (key.toLowerCase() === "z" || !modifiers.shiftKey)))
 
 export const isMesurerKeyboardBridge = (
   value: unknown,

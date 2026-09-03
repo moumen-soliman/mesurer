@@ -26,6 +26,7 @@ test("extension keyboard gate isolates Mesurer and bridges page-editor shortcuts
 
     const state = {
       pageListenerEvents: 0,
+      pageInputEvents: 0,
       editorEvents: 0,
       bridgedEvents: 0,
     };
@@ -45,6 +46,9 @@ test("extension keyboard gate isolates Mesurer and bridges page-editor shortcuts
     document.addEventListener("keydown", () => {
       state.pageListenerEvents += 1;
     });
+    document.addEventListener("input", () => {
+      state.pageInputEvents += 1;
+    });
     window.addEventListener("message", (event) => {
       if (event.data?.type === "__MESURER_KEYBOARD_BRIDGE__") state.bridgedEvents += 1;
     });
@@ -61,13 +65,32 @@ test("extension keyboard gate isolates Mesurer and bridges page-editor shortcuts
     );
     const afterEditor = { ...state };
 
+    document.documentElement.removeAttribute("data-mesurer-kb");
     prompt.focus();
+    document.documentElement.setAttribute("data-mesurer-kb", "1");
     prompt.dispatchEvent(
       new KeyboardEvent("keydown", {
         bubbles: true,
         composed: true,
         key: "t",
         code: "KeyT",
+      }),
+    );
+    prompt.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        bubbles: true,
+        composed: true,
+        key: "z",
+        code: "KeyZ",
+        ctrlKey: true,
+      }),
+    );
+    prompt.dispatchEvent(
+      new InputEvent("input", {
+        bubbles: true,
+        composed: true,
+        inputType: "insertText",
+        data: "x",
       }),
     );
 
@@ -84,11 +107,17 @@ test("extension keyboard gate isolates Mesurer and bridges page-editor shortcuts
       }),
     );
 
-    return { owned, bridgedEvents: state.bridgedEvents, releasedPageListenerEvents: state.pageListenerEvents };
+    return {
+      owned,
+      bridgedEvents: state.bridgedEvents,
+      pageInputEvents: state.pageInputEvents,
+      releasedPageListenerEvents: state.pageListenerEvents,
+    };
   });
 
   expect(result.owned.editorEvents).toBe(1);
   expect(result.owned.pageListenerEvents).toBe(0);
-  expect(result.bridgedEvents).toBe(1);
+  expect(result.pageInputEvents).toBe(0);
+  expect(result.bridgedEvents).toBe(2);
   expect(result.releasedPageListenerEvents).toBe(1);
 });

@@ -55,7 +55,7 @@ export const installKeyboardGate = (
     if (event instanceof KeyboardEvent) {
       if (isBrowserReservedChord(event)) return
       if (event.type === "keydown" || event.type === "keyup") {
-        if (isMesurerKeyboardBridgeKey(event.key, event)) {
+        if (isolateMesurerEvents && isMesurerKeyboardBridgeKey(event.key, event)) {
           view.postMessage(
             {
               type: MESURER_KEYBOARD_BRIDGE,
@@ -91,11 +91,36 @@ export const installKeyboardGate = (
     else event.stopPropagation()
   }
 
+  const blockPageInput = (event: Event) => {
+    if (
+      !ownsKeyboard(view) ||
+      isMesurerKeyboardEvent(event, view) ||
+      isInsideMesurer(event.target)
+    ) {
+      return
+    }
+    event.preventDefault()
+    if (isolateMesurerEvents) event.stopImmediatePropagation()
+    else event.stopPropagation()
+  }
+
   for (const type of ["keydown", "keypress", "keyup", "beforeinput"]) {
     view.addEventListener(type, blockPageKey, true)
   }
   for (const type of ["focus", "blur", "focusin", "focusout"]) {
     view.addEventListener(type, blockPageFocus, true)
+  }
+  for (const type of [
+    "beforeinput",
+    "input",
+    "paste",
+    "copy",
+    "cut",
+    "compositionstart",
+    "compositionupdate",
+    "compositionend",
+  ]) {
+    view.addEventListener(type, blockPageInput, true)
   }
 
   if (!isolateMesurerEvents) return
@@ -140,6 +165,13 @@ export const installKeyboardGate = (
         else listener.handleEvent(event)
       }
       wrappers.set(key, wrapped)
+      if (options && typeof options !== "boolean" && options.signal) {
+        options.signal.addEventListener(
+          "abort",
+          () => wrappers?.delete(key),
+          { once: true },
+        )
+      }
     }
     return nativeAddEventListener.call(this, type, wrapped, options)
   }
@@ -152,6 +184,13 @@ export const installKeyboardGate = (
     const wrapped = listener
       ? wrappedListeners.get(listener)?.get(listenerKey(type, options))
       : undefined
-    return nativeRemoveEventListener.call(this, type, wrapped ?? listener, options)
+    const result = nativeRemoveEventListener.call(
+      this,
+      type,
+      wrapped ?? listener,
+      options,
+    )
+    if (wrapped) wrappedListeners.get(listener!)?.delete(listenerKey(type, options))
+    return result
   }
 }

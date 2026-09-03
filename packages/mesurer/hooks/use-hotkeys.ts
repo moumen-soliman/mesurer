@@ -308,7 +308,11 @@ export const useHotkeys = (options: HotkeyOptions) => {
     }
 
     const handleKeyboardBridge = (event: MessageEvent) => {
-      if (event.origin !== target.location.origin || !isMesurerKeyboardOwned(target)) return
+      if (
+        event.source !== target ||
+        event.origin !== target.location.origin ||
+        !isMesurerKeyboardOwned(target)
+      ) return
       const data = event.data
       if (!isMesurerKeyboardBridge(data)) return
       const bridged = new KeyboardEvent(data.eventType, {
