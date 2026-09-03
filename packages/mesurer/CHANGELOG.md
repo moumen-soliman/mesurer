@@ -1,5 +1,10 @@
 # mesurer
 
+## 0.1.3
+
+- fix color settings input, copy, and paste updates in embedded apps and the Chrome extension
+- scope extension keyboard isolation so it does not interfere with embedded Mesurer instances
+
 ## 0.1.2
 
 - add configurable keyboard shortcuts and toolbar minimization
