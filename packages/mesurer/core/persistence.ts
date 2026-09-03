@@ -70,6 +70,7 @@ export type MesurerStoredSettings = {
   selectNewGuideEnabled?: boolean
   multiMeasureEnabled?: boolean
   persistOnReload?: boolean
+  shortcutsEnabled?: boolean
   guideStyle?: Partial<GuideStyle>
   rulerSettings?: Partial<RulerSettings>
   screenshotSettings?: Partial<ScreenshotSettings>
@@ -316,6 +317,7 @@ export const normalizeStoredSettings = (value: unknown): MesurerStoredSettings =
     ...(typeof input.selectNewGuideEnabled === "boolean" ? { selectNewGuideEnabled: input.selectNewGuideEnabled } : {}),
     ...(typeof input.multiMeasureEnabled === "boolean" ? { multiMeasureEnabled: input.multiMeasureEnabled } : {}),
     ...(typeof input.persistOnReload === "boolean" ? { persistOnReload: input.persistOnReload } : {}),
+    ...(typeof input.shortcutsEnabled === "boolean" ? { shortcutsEnabled: input.shortcutsEnabled } : {}),
     ...(normalizeGuideStyle(input.guideStyle) ? { guideStyle: normalizeGuideStyle(input.guideStyle) } : {}),
     ...(normalizeRulerSettings(input.rulerSettings) ? { rulerSettings: normalizeRulerSettings(input.rulerSettings) } : {}),
     ...(normalizeScreenshotSettings(input.screenshotSettings)

@@ -110,7 +110,7 @@ export type TextInspectorAPI = {
   isEnabled: () => boolean;
   cleanup: () => void;
   destroy: () => void;
-  clear: () => void;
+  clear: () => boolean;
   inspect: (element: HTMLElement) => boolean;
   canUndo: () => boolean;
   canRedo: () => boolean;
@@ -553,9 +553,10 @@ export const createTextInspector = (
   };
 
   const clear = () => {
-    if (!pinned.length) return;
+    if (!pinned.length) return false;
     recordPinState();
     clearPins(true);
+    return true;
   };
 
   const syncPins = () => {
@@ -583,19 +584,21 @@ export const createTextInspector = (
     frameScheduled = true;
     requestAnimationFrame(() => {
       frameScheduled = false;
-      if (!enabled) return;
+      if (!enabled || paused) return;
       updateHover();
       syncPins();
     });
   };
 
   const onMouseMove = (event: MouseEvent) => {
+    if (paused) return;
     pointerX = event.clientX;
     pointerY = event.clientY;
     scheduleFrame();
   };
 
   const onMouseOut = (event: MouseEvent) => {
+    if (paused) return;
     if (!event.relatedTarget) hideHover();
   };
 
@@ -688,7 +691,16 @@ export const createTextInspector = (
 
   const setPaused = (next: boolean) => {
     paused = next;
-    if (paused) hideHover();
+    if (paused) {
+      hideHover();
+      document.body.classList.remove(BODY_MODE_CLASS);
+      if (overlay) overlay.style.visibility = "hidden";
+      return;
+    }
+    if (enabled) {
+      document.body.classList.add(BODY_MODE_CLASS);
+      if (overlay) overlay.style.visibility = "";
+    }
   };
 
   const cleanup = () => {

@@ -13,6 +13,280 @@ test("starts with the Select tool active", async ({ page }) => {
   );
 });
 
+test("does not run shortcuts while typing in a page field", async ({ page }) => {
+  await page.goto("/e2e/fixtures/guide-overlay.html");
+  await page.getByRole("button", { name: "Inspect (I)" }).click();
+  const field = page.getByLabel("Page field");
+  await field.focus();
+  await field.press("2");
+  await expect(field).toHaveValue("2");
+  await expect(page.getByRole("button", { name: "Inspect (I)" })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+});
+
+test("Escape exits the tool without stealing focus from a page field", async ({
+  page,
+}) => {
+  await page.goto("/e2e/fixtures/guide-overlay.html");
+  await expect(page.getByRole("button", { name: "Inspect (I)" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  const field = page.getByLabel("Page field");
+  await field.focus();
+  await page.keyboard.press("Escape");
+  await expect(field).toBeFocused();
+  await expect(page.getByRole("button", { name: "Inspect (I)" })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+});
+
+test("double Escape does not minimize while a page field has focus", async ({ page }) => {
+  await page.goto("/e2e/fixtures/guide-overlay.html");
+  const field = page.getByLabel("Page field");
+  await field.focus();
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape");
+  await expect(field).toBeFocused();
+  await expect(page.getByRole("button", { name: "Show Mesurer toolbar" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Inspect (I)" })).toBeVisible();
+});
+
+test("disables global shortcuts from Settings", async ({ page }) => {
+  await page.goto("/e2e/fixtures/guide-overlay.html");
+  await page.getByRole("button", { name: "Settings" }).click();
+  await page.getByRole("switch", { name: "Shortcuts" }).click();
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("2");
+  await expect(page.getByRole("button", { name: "Inspect (I)" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Select (S)" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Settings" }).click();
+  await page.getByRole("switch", { name: "Shortcuts" }).click();
+  await page.keyboard.press("Escape");
+});
+
+test("minimizes to one button and restores the workspace", async ({ page }) => {
+  await page.goto("/e2e/fixtures/guide-overlay.html");
+  await page.getByRole("button", { name: "Guides (G)" }).click();
+  await page.mouse.click(300, 200);
+
+  await page.getByRole("button", { name: "Settings" }).click();
+  await page.getByRole("button", { name: "Minimize toolbar" }).click();
+
+  await expect(page.getByRole("button", { name: "Show Mesurer toolbar" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Inspect (I)" })).toHaveCount(0);
+  await expect(page.locator("[data-mesurer-guide]")).toHaveCount(1);
+
+  await page.keyboard.press("2");
+  await expect(page.getByRole("button", { name: "Show Mesurer toolbar" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Select (S)" })).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Show Mesurer toolbar" }).click();
+  await expect(page.getByRole("button", { name: "Guides (G)" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await expect(page.locator("[data-mesurer-guide]")).toHaveCount(1);
+});
+
+test("minimizing pauses Typography without clearing pinned cards", async ({ page }) => {
+  await page.goto("/e2e/fixtures/guide-overlay.html");
+  await page.getByRole("button", { name: "Typography (A)" }).click();
+  await page.mouse.click(300, 280);
+  await expect(page.locator(".mesurer-ti-card--pinned")).toHaveCount(1);
+
+  await page.getByRole("button", { name: "Settings" }).click();
+  await page.getByRole("button", { name: "Minimize toolbar" }).click();
+  await expect(page.getByRole("button", { name: "Show Mesurer toolbar" })).toBeVisible();
+  await expect(page.locator("body")).not.toHaveClass(/mesurer-text-inspector-\d+-mode/);
+
+  await page.mouse.click(300, 560);
+  await expect(page.locator(".mesurer-ti-card--pinned")).toHaveCount(1);
+
+  await page.getByRole("button", { name: "Show Mesurer toolbar" }).click();
+  await expect(page.getByRole("button", { name: "Typography (A)" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await expect(page.locator(".mesurer-ti-card--pinned")).toHaveCount(1);
+  await expect(page.locator("body")).toHaveClass(/mesurer-text-inspector-\d+-mode/);
+});
+
+test("dragging the minimized button does not restore the toolbar", async ({ page }) => {
+  await page.goto("/e2e/fixtures/guide-overlay.html");
+  await page.getByRole("button", { name: "Settings" }).click();
+  await page.getByRole("button", { name: "Minimize toolbar" }).click();
+
+  const restore = page.getByRole("button", { name: "Show Mesurer toolbar" });
+  await expect(restore).toBeVisible();
+  const box = await restore.boundingBox();
+  expect(box).not.toBeNull();
+  const startX = box!.x + box!.width / 2;
+  const startY = box!.y + box!.height / 2;
+  await page.mouse.move(startX, startY);
+  await page.mouse.down();
+  await page.mouse.move(startX + 48, startY + 36);
+  await page.mouse.up();
+
+  await expect(restore).toBeVisible();
+  await expect(page.getByRole("button", { name: "Inspect (I)" })).toHaveCount(0);
+
+  await restore.click();
+  await expect(page.getByRole("button", { name: "Inspect (I)" })).toBeVisible();
+});
+
+test("double Escape minimizes Mesurer", async ({ page }) => {
+  await page.goto("/e2e/fixtures/guide-overlay.html");
+  await page.getByRole("button", { name: "Inspect (I)" }).focus();
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: "Show Mesurer toolbar" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Inspect (I)" })).toHaveCount(0);
+});
+
+test("Escape minimizes after the tool has already been dismissed", async ({ page }) => {
+  await page.goto("/e2e/fixtures/guide-overlay.html");
+  await page.getByRole("button", { name: "Inspect (I)" }).focus();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: "Inspect (I)" })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+  await page.waitForTimeout(1200);
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: "Show Mesurer toolbar" })).toBeVisible();
+});
+
+test("Escape minimizes when idle even if rulers were left on", async ({ page }) => {
+  await page.goto("/e2e/fixtures/guide-overlay.html");
+  await page.getByRole("button", { name: "Rulers (R)" }).click();
+  await expect(page.getByRole("button", { name: "Rulers (R)" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: "Inspect (I)" })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+  await expect(page.getByRole("button", { name: "Rulers (R)" })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+  await page.waitForTimeout(1200);
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: "Show Mesurer toolbar" })).toBeVisible();
+});
+
+test("Escape minimizes after inspect selection with a delayed second press", async ({
+  page,
+}) => {
+  await page.goto("/e2e/fixtures/guide-overlay.html");
+  await activateSelect(page);
+  const target = page.getByRole("button", { name: "Underlying app button" });
+  const targetBox = await target.boundingBox();
+  expect(targetBox).not.toBeNull();
+  await page.mouse.click(targetBox!.x + targetBox!.width / 2, targetBox!.y + targetBox!.height / 2);
+  await expect(page.locator("[data-mesurer-selected-measurement]")).toHaveCount(1);
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: "Inspect (I)" })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+  await page.waitForTimeout(1200);
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: "Show Mesurer toolbar" })).toBeVisible();
+});
+
+test("Escape exits annotate Select on the first press", async ({ page }) => {
+  await page.goto("/e2e/fixtures/guide-overlay.html");
+  await page.getByRole("button", { name: "Annotate tools (2)" }).click();
+  await expect(page.getByRole("button", { name: "Select (S)" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: "Select (S)" })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+});
+
+test("double Escape minimizes after clicking the page in annotate Select", async ({
+  page,
+}) => {
+  await page.goto("/e2e/fixtures/guide-overlay.html");
+  await page.getByRole("button", { name: "Annotate tools (2)" }).click();
+  await expect(page.getByRole("button", { name: "Select (S)" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await page.mouse.click(300, 200);
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: "Select (S)" })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: "Show Mesurer toolbar" })).toBeVisible();
+});
+
+test("Escape turns off X-ray and rulers with the active inspect tool", async ({
+  page,
+}) => {
+  await page.goto("/e2e/fixtures/guide-overlay.html");
+  await page.getByRole("button", { name: "X-ray (X)" }).click();
+  await page.getByRole("button", { name: "Rulers (R)" }).click();
+  await expect(page.getByRole("button", { name: "X-ray (X)" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await expect(page.getByRole("button", { name: "Rulers (R)" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: "Inspect (I)" })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+  await expect(page.getByRole("button", { name: "X-ray (X)" })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+  await expect(page.getByRole("button", { name: "Rulers (R)" })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+});
+
+test("Escape exits Typography after inspecting a page element", async ({ page }) => {
+  await page.goto("/e2e/fixtures/guide-overlay.html");
+  await page.getByRole("button", { name: "Typography (A)" }).click();
+  await expect(page.locator("body")).toHaveClass(/mesurer-text-inspector-\d+-mode/);
+  await page.mouse.move(300, 280);
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: "Typography (A)" })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+  await expect(page.locator("body")).not.toHaveClass(/mesurer-text-inspector-\d+-mode/);
+});
+
+test("double Escape minimizes after closing Settings", async ({ page }) => {
+  await page.goto("/e2e/fixtures/guide-overlay.html");
+  await page.getByRole("button", { name: "Settings" }).click();
+  await expect(page.getByRole("dialog", { name: "Settings" })).toBeVisible();
+  await page.getByLabel("Color hex value").first().focus();
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: "Show Mesurer toolbar" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Inspect (I)" })).toHaveCount(0);
+});
+
 test("switches tool groups with global commands and defaults", async ({ page }) => {
   await page.goto("/e2e/fixtures/guide-overlay.html");
   await expect(page.getByRole("button", { name: "Inspect (I)" })).toBeVisible();
@@ -68,6 +342,20 @@ test("Escape closes the guide orientation menu without exiting the active tool",
   await menu.press("Escape");
 
   await expect(menu).toBeHidden();
+  await expect(page.getByRole("button", { name: "Guides (G)" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+});
+
+test("guide orientation menu does not reveal annotate tools", async ({ page }) => {
+  await page.goto("/e2e/fixtures/guide-overlay.html");
+  await page.getByRole("button", { name: "Guides (G)" }).click();
+  await page.getByRole("button", { name: "Guide orientation menu" }).click();
+  await expect(page.getByRole("menu")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Select (S)" })).toBeHidden();
+  await page.getByRole("menu").getByText("Horizontal", { exact: true }).click();
+  await expect(page.getByRole("button", { name: "Select (S)" })).toBeHidden();
   await expect(page.getByRole("button", { name: "Guides (G)" })).toHaveAttribute(
     "aria-pressed",
     "true",
@@ -972,27 +1260,16 @@ test("cycles through nested elements on repeated clicks", async ({ page }) => {
   await expect(page.locator("[data-mesurer-selected-measurement]")).toContainText("200 x 120");
 });
 
-test("toolbar shortcuts win over a page prompt that owns typing", async ({ page }) => {
+test("does not run shortcuts while a page prompt has focus", async ({ page }) => {
   await page.goto("/e2e/fixtures/guide-overlay.html?prompt");
   const prompt = page.getByTestId("page-prompt");
   await expect(prompt).toBeVisible();
-  await expect(page.getByRole("button", { name: "Inspect (I)" })).toBeVisible();
+  await prompt.focus();
 
   await page.keyboard.press("2");
+  await expect(prompt).toHaveValue("2");
   await expect(page.locator(".mesurer-toolbar-tool-switch")).toHaveAttribute(
     "data-value",
-    "annotate",
+    "inspect",
   );
-  await expect(prompt).toHaveValue("");
-
-  await page.keyboard.press("t");
-  await expect(page.getByRole("button", { name: "Text (T)" })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
-  await page.mouse.click(220, 180);
-  const editor = page.getByRole("textbox", { name: "Text annotation" });
-  await editor.pressSequentially("Hello from Mesurer");
-  await expect(editor).toHaveText("Hello from Mesurer");
-  await expect(prompt).toHaveValue("");
 });

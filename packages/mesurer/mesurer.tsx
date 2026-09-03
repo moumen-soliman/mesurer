@@ -20,6 +20,7 @@ export default function Mesurer({
   hoverHighlightEnabled = true,
   layoutDetailsEnabled = true,
   persistOnReload = false,
+  shortcutsEnabled = true,
   portalTarget,
   persistKey,
   colorPickerFormats = ["hex", "rgb", "oklch"],
@@ -53,6 +54,7 @@ export default function Mesurer({
       hoverHighlightEnabled={hoverHighlightEnabled}
       layoutDetailsEnabled={layoutDetailsEnabled}
       persistOnReload={persistOnReload}
+      shortcutsEnabled={shortcutsEnabled}
       persistKey={persistKey}
       colorPickerFormats={colorPickerFormats}
       colorPickerClickFormat={colorPickerClickFormat}

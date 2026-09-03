@@ -33,3 +33,34 @@ export const transformTranslateX = (value: string) => {
 
 export const nearlyEqual = (a: number, b: number, epsilon = 0.5) =>
   Math.abs(a - b) < epsilon
+
+export const syncToolbarLayoutWidths = ({
+  stage,
+  collapseStage,
+  inspectPanel,
+  annotatePanel,
+  expandedPanel,
+  iconSlot,
+}: {
+  stage: HTMLElement
+  collapseStage: HTMLElement
+  inspectPanel: HTMLElement
+  annotatePanel: HTMLElement
+  expandedPanel: HTMLElement
+  iconSlot: HTMLElement
+}) => {
+  const inspectWidth = inspectPanel.offsetWidth
+  const annotateWidth = annotatePanel.offsetWidth
+  if (inspectWidth > 0) stage.style.setProperty("--msr-inspect-w", `${inspectWidth}px`)
+  if (annotateWidth > 0) stage.style.setProperty("--msr-annotate-w", `${annotateWidth}px`)
+  void stage.offsetWidth
+  const expandedWidth = expandedPanel.offsetWidth
+  const iconWidth = iconSlot.offsetWidth
+  if (expandedWidth > 0) {
+    collapseStage.style.setProperty("--msr-expanded-w", `${expandedWidth}px`)
+  }
+  if (iconWidth > 0) {
+    collapseStage.style.setProperty("--msr-icon-w", `${iconWidth}px`)
+  }
+  void collapseStage.offsetWidth
+}

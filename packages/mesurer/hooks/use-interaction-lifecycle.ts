@@ -20,6 +20,8 @@ type Options = {
   xrayVisible: boolean;
   rulersVisible: boolean;
   toolbarActive: boolean;
+  minimized: boolean;
+  shortcutsEnabled: boolean;
   settingsOpen: boolean;
   ownerDocument: Document;
   ownerWindow: Window;
@@ -91,7 +93,9 @@ type Options = {
   setRulersVisible: Dispatch<SetStateAction<boolean>>;
   setGuideOrientation: Dispatch<SetStateAction<"vertical" | "horizontal">>;
   onInteract: () => void;
+  onMinimize: () => void;
   onToggleSettings: () => void;
+  dismissInspectorPins: () => boolean;
 };
 
 export const useInteractionLifecycle = (options: Options) => {
@@ -159,9 +163,16 @@ export const useInteractionLifecycle = (options: Options) => {
       ),
     [options],
   );
+  const isToolbarIdle = useCallback(
+    () =>
+      options.toolMode === "none" &&
+      !options.xrayVisible &&
+      !options.rulersVisible,
+    [options],
+  );
   const isActiveToolMode = useCallback(
     () =>
-      (options.toolMode !== "none" && options.toolMode !== "selection") ||
+      options.toolMode !== "none" ||
       options.xrayVisible ||
       options.rulersVisible,
     [options],
@@ -171,16 +182,14 @@ export const useInteractionLifecycle = (options: Options) => {
       options.selectedGuideIds.length > 0 ||
       options.selectedArrowIds.length > 0 ||
       options.selectedTextIds.length > 0 ||
-      options.selectedPenStrokeIds.length > 0 ||
-      options.selectedMeasurements.length > 0 ||
-      Boolean(options.selectedElement) ||
-      Boolean(options.selectedMeasurement),
+      options.selectedPenStrokeIds.length > 0,
     [options],
   );
   const exitActiveTool = useCallback(() => {
     clearTransientState();
     options.clearSelection();
     options.setXrayVisible(false);
+    options.setRulersVisible(false);
     options.setToolMode("none");
   }, [clearTransientState, options]);
   const exitMesurerCompletely = useCallback(() => {
@@ -193,13 +202,17 @@ export const useInteractionLifecycle = (options: Options) => {
     options.setToolMode("none");
   }, [clearTransientState, options]);
 
+  const keyboardOwned =
+    options.enabled &&
+    !options.minimized &&
+    (options.toolMode !== "none" || options.toolbarActive);
   const overlayActive =
     options.enabled && (options.toolMode !== "none" || options.toolbarActive);
 
   useOverlayKeyboard({
     eventTarget: options.ownerWindow,
     overlayRef: options.overlayRef,
-    overlayActive,
+    overlayActive: keyboardOwned,
   });
 
   useHotkeys({
@@ -209,10 +222,14 @@ export const useInteractionLifecycle = (options: Options) => {
     clearTransientState,
     hasTransientInteraction,
     isActiveToolMode,
+    isToolbarIdle,
     hasSelection,
     clearSelection: options.clearSelection,
     exitActiveTool,
-    exitMesurerCompletely,
+    dismissInspectorPins: options.dismissInspectorPins,
+    minimizeMesurer: options.onMinimize,
+    shortcutsEnabled: options.shortcutsEnabled,
+    minimized: options.minimized,
     undo: options.undo,
     redo: options.redo,
     removeSelected: options.removeSelected,

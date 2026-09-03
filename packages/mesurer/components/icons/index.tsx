@@ -12,6 +12,7 @@ export { CameraIcon } from './camera'
 export { SettingsIcon } from './settings'
 export { SelectInspectIcon } from './select-inspect'
 export { AnnotateIcon } from './annotate'
+export { MesurerMarkIcon } from './mesurer-mark'
 
 export { DropperIcon as ColorPickerIcon } from './dropper'
 export { MeasureBarIcon as RulerIcon } from './measure-bar'

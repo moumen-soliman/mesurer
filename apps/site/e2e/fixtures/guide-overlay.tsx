@@ -79,6 +79,17 @@ function Fixture() {
         Secondary app button
       </button>
       <output data-testid="underlying-click-count">{clicks}</output>
+      <input
+        data-testid="page-field"
+        aria-label="Page field"
+        style={{
+          position: "absolute",
+          left: 40,
+          top: 640,
+          width: 280,
+          height: 32,
+        }}
+      />
       {stealPagePrompt ? (
         <textarea
           data-testid="page-prompt"

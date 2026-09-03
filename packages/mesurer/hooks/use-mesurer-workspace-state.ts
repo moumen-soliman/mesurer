@@ -100,6 +100,7 @@ export const useMesurerWorkspaceState = ({
     persistedState?.selectedTextIds,
   );
   const [toolbarActive, setToolbarActive] = useState(true);
+  const [minimized, setMinimized] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [xrayVisible, setXrayVisible] = useState(xrayVisibleRef.current);
   const [guideOrientation, setGuideOrientation] = useState<"vertical" | "horizontal">(
@@ -135,6 +136,8 @@ export const useMesurerWorkspaceState = ({
     ...text,
     toolbarActive,
     setToolbarActive,
+    minimized,
+    setMinimized,
     settingsOpen,
     setSettingsOpen,
     xrayVisible,

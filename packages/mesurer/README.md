@@ -53,6 +53,7 @@ function App() {
 | `hoverHighlightEnabled` | Disables hover highlight and deselects on click when `false`.                 |
 | `layoutDetailsEnabled`  | Shows gap and padding under selected dimensions. Default `true`.              |
 | `persistOnReload`       | Persists workspace state across reloads when `true`.                          |
+| `shortcutsEnabled`      | Enables global keyboard shortcuts when `true`. Default `true`.                |
 | `persistKey`            | Optional workspace storage key; default workspaces are isolated per browser tab. |
 | `portalTarget`          | Optional element or shadow root used as the overlay portal mount target.      |
 | `persistence`           | Optional storage adapter for custom or extension-backed persistence.           |
@@ -93,7 +94,7 @@ Props are the defaults. Saved settings override them; **Use defaults** restores 
 | `H`                    | Set guide orientation to horizontal.                  |
 | `V`                    | Set guide orientation to vertical.                    |
 | `Alt`                  | Temporarily enable option/guide measurement overlays. |
-| `Esc`                  | Close an open panel, cancel the current interaction, or deselect the tool; press twice to exit Mesurer completely. |
+| `Esc`                  | Close an open panel, cancel the current interaction, or deselect the tool. Press again to minimize Mesurer. |
 | `Backspace` / `Delete` | Remove selected guides, arrows, pen strokes, or text. |
 | `Cmd/Ctrl + Z`         | Undo.                                                 |
 | `Cmd/Ctrl + Shift + Z` | Redo.                                                 |
@@ -114,7 +115,7 @@ Props are the defaults. Saved settings override them; **Use defaults** restores 
 - **Distance overlays** - Hold Alt for quick spacing checks
 - **Undo/redo** - Command history for guides, measurements, arrows, pen strokes, and text annotations
 - **Settings** - Configure selection, guide, ruler, arrow, text, color, format, and persistence behavior
-- **Workspace controls** - Restore defaults or clear guides, measurements, and annotations
+- **Workspace controls** - Restore defaults or clear guides, measurements, and annotations; minimize Mesurer to a single toolbar button
 
 ## Requirements
 

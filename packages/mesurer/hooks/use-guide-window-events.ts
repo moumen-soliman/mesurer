@@ -22,6 +22,7 @@ type UseGuideWindowEventsOptions = {
   settingsOpen: boolean
   toolMode: ToolMode
   toolbarActive: boolean
+  minimized: boolean
   snapGuidesEnabled: boolean
   guides: Guide[]
   toolbarRef: RefObject<HTMLDivElement | null>
@@ -42,6 +43,7 @@ export const useGuideWindowEvents = ({
   settingsOpen,
   toolMode,
   toolbarActive,
+  minimized,
   snapGuidesEnabled,
   guides,
   toolbarRef,
@@ -65,6 +67,7 @@ export const useGuideWindowEvents = ({
     settingsOpen,
     toolMode,
     toolbarActive,
+    minimized,
     snapGuidesEnabled,
     guides,
     createActionCommit,
@@ -82,6 +85,7 @@ export const useGuideWindowEvents = ({
     settingsOpen,
     toolMode,
     toolbarActive,
+    minimized,
     snapGuidesEnabled,
     guides,
     createActionCommit,
@@ -127,6 +131,7 @@ export const useGuideWindowEvents = ({
 
     const handleGuidePointerDown = (event: PointerEvent) => {
       const current = optionsRef.current
+      if (current.minimized) return
       if (current.toolbarActive && current.toolMode === "none") {
         if (!current.toolbarRef.current?.contains(event.target as Node)) {
           current.setToolbarActive(false)

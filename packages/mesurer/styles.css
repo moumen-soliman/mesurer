@@ -98,6 +98,54 @@
   z-index: 1;
 }
 
+.mesurer-toolbar-minimize-stage {
+  flex: none;
+  min-width: 0;
+  width: var(--msr-expanded-w, auto);
+  overflow: hidden;
+}
+
+.mesurer-toolbar-minimize-stage[data-minimized="true"] {
+  width: var(--msr-icon-w, auto);
+}
+
+.mesurer-toolbar-minimize-stage[data-minimized="true"] .mesurer-toolbar-minimize-track {
+  transform: translateX(calc(-1 * var(--msr-expanded-w, 0px)));
+}
+
+.mesurer-toolbar-minimize-stage:has([role="dialog"]),
+.mesurer-toolbar-minimize-stage:has([role="menu"]),
+.mesurer-toolbar-minimize-stage:has(.mesurer-screenshot-preview) {
+  overflow: visible;
+}
+
+.mesurer-toolbar-minimize-track {
+  display: flex;
+  flex: none;
+  transform: translateX(0);
+}
+
+.mesurer-toolbar-minimize-slot {
+  flex: none;
+}
+
+.mesurer-toolbar-minimize-slot[data-slot="expanded"] {
+  width: var(--msr-expanded-w, auto);
+}
+
+.mesurer-toolbar-minimize-slot[data-slot="icon"] {
+  width: var(--msr-icon-w, auto);
+}
+
+.mesurer-toolbar-minimize-slot:not([data-open="true"]) {
+  pointer-events: none;
+}
+
+.mesurer-toolbar-motion:not([data-resizing="true"])
+  .mesurer-toolbar-minimize-slot[data-slot="icon"]:not([data-open="true"]) {
+  visibility: hidden;
+}
+
 .mesurer-toolbar-tool-stage {
   flex: none;
   min-width: 0;
@@ -141,6 +189,11 @@
 
 .mesurer-toolbar-tool-slot:not([data-open="true"]) {
   pointer-events: none;
+}
+
+.mesurer-toolbar-motion:not([data-resizing="true"])
+  .mesurer-toolbar-tool-slot:not([data-open="true"]) {
+  visibility: hidden;
 }
 
 .mesurer-toolbar-tool-panel {
@@ -191,6 +244,7 @@
   .mesurer-toolbar-motion,
   .mesurer-toolbar-chrome,
   .mesurer-toolbar-tool-track,
+  .mesurer-toolbar-minimize-track,
   .mesurer-toolbar-trailing,
   .mesurer-toolbar-motion[data-ready="true"] .mesurer-toolbar-tool-switch-pill {
     transition: none;

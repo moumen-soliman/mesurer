@@ -530,7 +530,7 @@ test("escape cancels the current interaction without clearing arrows", async ({ 
   await expect(page.locator("[data-mesurer-arrow-node]")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Select (S)" })).toHaveAttribute(
     "aria-pressed",
-    "true",
+    "false",
   );
 });
 
@@ -546,13 +546,16 @@ test("escape exits the active tool without switching groups", async ({ page }) =
     "aria-pressed",
     "false",
   );
+});
 
+test("double Escape minimizes after drawing an arrow", async ({ page }) => {
+  await page.goto("/e2e/fixtures/guide-overlay.html");
+  await activateArrows(page);
+  await drawArrow(page);
+  await expect(page.locator('[data-mesurer-arrow="true"]')).toHaveCount(1);
   await page.keyboard.press("Escape");
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("button", { name: "Arrows (D)" })).toHaveAttribute(
-    "aria-pressed",
-    "false",
-  );
+  await expect(page.getByRole("button", { name: "Show Mesurer toolbar" })).toBeVisible();
 });
 
 test.describe("touch input", () => {

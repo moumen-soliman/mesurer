@@ -11,7 +11,7 @@ import {
 } from "react";
 import type { ToolMode } from "../core/types";
 import { cn } from "../core/utils";
-import { toolbarMotionMs } from "../core/toolbar-motion";
+import { toolbarMotionMs, syncToolbarLayoutWidths } from "../core/toolbar-motion";
 import { useToolbarDrag } from "../hooks/use-toolbar-drag";
 import { useToolbarGroupMotion } from "../hooks/use-toolbar-group-motion";
 import { useToolbarTooltip } from "../hooks/use-toolbar-tooltip";
@@ -29,6 +29,7 @@ import {
   ColorPickerIcon,
   CursorIcon,
   GearIcon,
+  MesurerMarkIcon,
   MinusIcon,
   RulerIcon,
   RulersIcon,
@@ -76,7 +77,9 @@ type ToolbarSettings = {
 
 type ToolbarProps = {
   eventTarget: Window;
+  minimized: boolean;
   onInteract: () => void;
+  onRestore: () => void;
   onCancelTransient: () => void;
   tools: ToolbarTools;
   colorPicker: ToolbarColorPicker;
@@ -235,7 +238,9 @@ function ToolbarDivider() {
 function ToolbarComponent(
   {
     eventTarget,
+    minimized,
     onInteract,
+    onRestore,
     onCancelTransient,
     tools,
     colorPicker,
@@ -277,7 +282,7 @@ function ToolbarComponent(
     panel: settingsPanel,
   } = settings;
 
-  const { position, onPointerDown, onClickCapture } = useToolbarDrag({
+  const { position, onPointerDown, onClickCapture, consumeDragClick } = useToolbarDrag({
     x: 16,
     y: 16,
   }, eventTarget);
@@ -300,12 +305,21 @@ function ToolbarComponent(
   const annotatePanelRef = useRef<HTMLDivElement | null>(null);
   const motionRef = useRef<HTMLDivElement | null>(null);
   const trailingRef = useRef<HTMLDivElement | null>(null);
+  const collapseStageRef = useRef<HTMLDivElement | null>(null);
+  const expandedPanelRef = useRef<HTMLDivElement | null>(null);
+  const iconSlotRef = useRef<HTMLButtonElement | null>(null);
   const { markReady: markToolbarMotionReady } = useToolbarGroupMotion({
     eventTarget,
     toolGroup,
+    minimized,
     motionRef,
     stageRef: toolStageRef,
     trailingRef,
+    collapseRef: collapseStageRef,
+    inspectPanelRef,
+    annotatePanelRef,
+    expandedPanelRef,
+    iconSlotRef,
   });
   const previousToolGroupRef = useRef(toolGroup);
   const previousExclusiveToolIdRef = useRef<string | null>(
@@ -605,32 +619,47 @@ function ToolbarComponent(
   );
 
   useLayoutEffect(() => {
+    if (minimized) setGuideMenuOpen(false);
+  }, [minimized]);
+
+  useLayoutEffect(() => {
     const stage = toolStageRef.current;
     const inspectPanel = inspectPanelRef.current;
     const annotatePanel = annotatePanelRef.current;
-    if (!stage || !inspectPanel || !annotatePanel) return;
+    const collapseStage = collapseStageRef.current;
+    const expandedPanel = expandedPanelRef.current;
+    const iconSlot = iconSlotRef.current;
+    if (
+      !stage ||
+      !inspectPanel ||
+      !annotatePanel ||
+      !collapseStage ||
+      !expandedPanel ||
+      !iconSlot
+    ) {
+      return;
+    }
 
-    const widthOf = (panel: HTMLElement) => panel.offsetWidth;
-
-    const syncToolWidths = () => {
-      const inspectWidth = widthOf(inspectPanel);
-      const annotateWidth = widthOf(annotatePanel);
-      if (inspectWidth > 0) {
-        stage.style.setProperty("--msr-inspect-w", `${inspectWidth}px`);
-      }
-      if (annotateWidth > 0) {
-        stage.style.setProperty("--msr-annotate-w", `${annotateWidth}px`);
-      }
+    const syncWidths = () => {
+      syncToolbarLayoutWidths({
+        stage,
+        collapseStage,
+        inspectPanel,
+        annotatePanel,
+        expandedPanel,
+        iconSlot,
+      });
     };
 
-    syncToolWidths();
+    syncWidths();
     const frame = requestAnimationFrame(() => {
       stage.dataset.ready = "true";
       markToolbarMotionReady();
     });
-    const observer = new ResizeObserver(syncToolWidths);
+    const observer = new ResizeObserver(syncWidths);
     observer.observe(inspectPanel);
     observer.observe(annotatePanel);
+    observer.observe(iconSlot);
     return () => {
       cancelAnimationFrame(frame);
       observer.disconnect();
@@ -710,7 +739,21 @@ function ToolbarComponent(
       onMouseLeave={onToolbarLeave}
     >
     <div className="mesurer-toolbar-chrome" aria-hidden="true" />
-    <div className="mesurer-toolbar-surface msr:flex msr:items-center msr:gap-1">
+    <div className="mesurer-toolbar-surface msr:flex msr:items-center">
+       <div
+         ref={collapseStageRef}
+         className="mesurer-toolbar-minimize-stage"
+         data-minimized={minimized ? "true" : undefined}
+       >
+       <div className="mesurer-toolbar-minimize-track">
+       <div
+         className="mesurer-toolbar-minimize-slot"
+         data-slot="expanded"
+         data-open={!minimized}
+         aria-hidden={minimized}
+         inert={minimized ? true : undefined}
+       >
+       <div ref={expandedPanelRef} className="msr:flex msr:w-max msr:items-center msr:gap-1">
        <ToolGroupSwitch
          value={toolGroup}
          onChange={selectToolGroup}
@@ -1065,6 +1108,30 @@ function ToolbarComponent(
       </div>
       </ToolbarGroup>
        </div>
+    </div>
+    </div>
+    </div>
+    <div
+      className="mesurer-toolbar-minimize-slot"
+      data-slot="icon"
+      data-open={minimized}
+      aria-hidden={!minimized}
+      inert={!minimized ? true : undefined}
+    >
+      <button
+        ref={iconSlotRef}
+        type="button"
+        aria-label="Show Mesurer toolbar"
+        className="msr:flex msr:size-8 msr:select-none msr:items-center msr:justify-center msr:rounded-[8px] msr:text-black msr:outline-none msr:hover:bg-black/4"
+        onClick={(event) => {
+          if (event.defaultPrevented || consumeDragClick()) return;
+          onRestore();
+        }}
+      >
+        <MesurerMarkIcon size={20} />
+      </button>
+    </div>
+    </div>
     </div>
     </div>
     </div>

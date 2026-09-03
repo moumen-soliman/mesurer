@@ -64,7 +64,6 @@ export const installKeyboardGate = (view: Window = window) => {
     if (event instanceof KeyboardEvent && isBrowserReservedChord(event)) return
     event.preventDefault()
     event.stopPropagation()
-    event.stopImmediatePropagation()
   }
 
   for (const type of ["keydown", "keypress", "keyup", "beforeinput"]) {

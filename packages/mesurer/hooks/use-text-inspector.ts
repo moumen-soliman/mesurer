@@ -9,6 +9,7 @@ export const useTextInspector = (
   portalTarget: HTMLElement | ShadowRoot,
   toolMode: ToolMode,
   settingsOpen = false,
+  minimized = false,
 ): TextInspectorAPI => {
   const textInspectorRef = useRef<TextInspectorAPI | null>(null)
   if (!textInspectorRef.current) {
@@ -24,8 +25,8 @@ export const useTextInspector = (
       else if (previous === "text-inspector") textInspector.disable()
       modeRef.current = toolMode
     }
-    textInspector.setPaused(settingsOpen)
-  }, [settingsOpen, textInspector, toolMode])
+    textInspector.setPaused(settingsOpen || minimized)
+  }, [minimized, settingsOpen, textInspector, toolMode])
 
   useLayoutEffect(() => {
     return () => {

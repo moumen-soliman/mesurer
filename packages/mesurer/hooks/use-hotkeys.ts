@@ -1,13 +1,17 @@
 import type { Dispatch, SetStateAction } from "react"
 import { useLayoutEffect, useRef } from "react"
 import {
+  isInsideMesurer,
   isOverlayEscapeConsumed,
   isTypingInMesurer,
   isTypingInPage,
 } from "../core/keyboard-ownership"
 import type { ToolMode } from "../core/types"
 
-const DOUBLE_ESCAPE_MS = 400
+const DOUBLE_ESCAPE_MS = 1000
+
+const isEscapeKey = (event: KeyboardEvent) =>
+  event.key === "Escape" || event.code === "Escape"
 
 type HotkeyOptions = {
   eventTarget: Window
@@ -16,10 +20,14 @@ type HotkeyOptions = {
   clearTransientState: () => void
   hasTransientInteraction: () => boolean
   isActiveToolMode: () => boolean
+  isToolbarIdle: () => boolean
   hasSelection: () => boolean
   clearSelection: () => void
   exitActiveTool: () => void
-  exitMesurerCompletely: () => void
+  dismissInspectorPins: () => boolean
+  minimizeMesurer: () => void
+  shortcutsEnabled: boolean
+  minimized: boolean
   undo: () => void
   redo: () => void
   removeSelected: () => boolean
@@ -58,7 +66,7 @@ const attachCapture = (
 export const useHotkeys = (options: HotkeyOptions) => {
   const optionsRef = useRef(options)
   optionsRef.current = options
-  const lastEscapeAtRef = useRef(0)
+  const lastEscapeAtRef = useRef<number | null>(null)
 
   useLayoutEffect(() => {
     const target = options.eventTarget
@@ -67,45 +75,68 @@ export const useHotkeys = (options: HotkeyOptions) => {
       if (seen.has(event)) return
       seen.add(event)
       const current = optionsRef.current
-      if (isTypingInMesurer(event, target)) {
-        return
-      }
-      if (event.key === "Escape") {
+      if (isEscapeKey(event)) {
+        if (event.repeat) return
+        if (current.minimized) return
+        if (isTypingInPage(target)) {
+          lastEscapeAtRef.current = null
+          if (current.isToolbarIdle()) return
+        }
+        const now = performance.now()
+        const doubleEscape =
+          lastEscapeAtRef.current !== null &&
+          now - lastEscapeAtRef.current < DOUBLE_ESCAPE_MS
+        if (doubleEscape) {
+          event.preventDefault()
+          lastEscapeAtRef.current = null
+          current.minimizeMesurer()
+          return
+        }
+        if (isTypingInMesurer(event, target) && !current.isSettingsOpen()) return
         if (isOverlayEscapeConsumed(event)) return
+        event.preventDefault()
         if (current.isSettingsOpen()) {
+          lastEscapeAtRef.current = now
           current.onToggleSettings()
           return
         }
         if (current.isScreenshotActive()) {
+          lastEscapeAtRef.current = now
           current.onCloseScreenshot()
           return
         }
         if (current.isColorPickerActive()) {
+          lastEscapeAtRef.current = now
           current.onCloseColorPicker()
           return
         }
-        event.preventDefault()
-        const now = Date.now()
-        const doubleEscape = now - lastEscapeAtRef.current < DOUBLE_ESCAPE_MS
-        lastEscapeAtRef.current = now
-        if (doubleEscape) {
-          current.exitMesurerCompletely()
+        if (!current.isToolbarIdle()) {
+          if (current.hasTransientInteraction()) {
+            current.clearTransientState()
+          } else if (current.dismissInspectorPins()) {
+            // keep typography mode; pins go first
+          } else if (current.hasSelection()) {
+            current.clearSelection()
+          } else if (current.isActiveToolMode()) {
+            current.exitActiveTool()
+            if (!isTypingInPage(target)) {
+              current.overlayRef.current?.focus({ preventScroll: true })
+            }
+          }
+          lastEscapeAtRef.current = now
           return
         }
-        if (current.hasTransientInteraction()) {
-          current.clearTransientState()
-          return
-        }
-        if (current.isActiveToolMode()) {
-          current.exitActiveTool()
-          return
-        }
-        if (current.hasSelection()) {
-          current.clearSelection()
-          return
-        }
+        lastEscapeAtRef.current = null
+        current.minimizeMesurer()
         return
       }
+      if (isTypingInMesurer(event, target)) {
+        return
+      }
+      if (isTypingInPage(target)) return
+      if (current.minimized) return
+
+      if (!current.shortcutsEnabled) return
 
       const hasPrimaryModifier =
         event.metaKey ||
@@ -117,7 +148,6 @@ export const useHotkeys = (options: HotkeyOptions) => {
         ((event.key && event.key.toLowerCase() === "a") || event.code === "KeyA")
 
       if (isSelectAll) {
-        if (isTypingInPage(target) && !current.isOverlayActive()) return
         const didSelect = current.selectAllAnnotations()
         if (didSelect || current.isOverlayActive()) {
           event.preventDefault()
@@ -127,14 +157,12 @@ export const useHotkeys = (options: HotkeyOptions) => {
         return
       }
 
-      if (!current.isOverlayActive() && isTypingInPage(target)) return
-
       if (hasPrimaryModifier) {
         if (event.key === ",") {
           event.preventDefault()
+          current.onInteract()
           current.onCloseScreenshot()
           current.onToggleSettings()
-          current.onInteract()
           return
         }
         if (event.key.toLowerCase() !== "z") return
@@ -157,32 +185,33 @@ export const useHotkeys = (options: HotkeyOptions) => {
 
       if (key === "p") {
         event.preventDefault()
+        current.onInteract()
         current.onCloseScreenshot()
         current.onColorPicker()
-        current.onInteract()
         return
       }
 
       if (key === "c") {
         event.preventDefault()
-        current.onScreenshot()
         current.onInteract()
+        current.onScreenshot()
         return
       }
 
       if (key === "x" || key === "r") {
         event.preventDefault()
+        current.onInteract()
         current.setEnabled(true)
         current.clearTransientState()
         current.onCloseColorPicker()
         current.onCloseScreenshot()
         if (key === "x") current.onToggleXray()
         else current.onToggleRulers()
-        current.onInteract()
         return
       }
 
       if (key === "1" || key === "2") {
+        current.onInteract()
         current.clearTransientState()
         current.setEnabled(true)
         current.onCloseColorPicker()
@@ -190,61 +219,60 @@ export const useHotkeys = (options: HotkeyOptions) => {
         current.setXrayVisible(false)
         current.setRulersVisible(false)
         current.setToolMode(key === "1" ? "select" : "selection")
-        current.onInteract()
         return
       }
 
       if (current.isOverlayActive()) {
         if (key === "a" && !hasPrimaryModifier) {
+          current.onInteract()
           current.clearTransientState()
           current.onCloseScreenshot()
           current.setToolMode((prev) =>
             prev === "text-inspector" ? "none" : "text-inspector",
           )
-          current.onInteract()
           return
         }
 
         if (key === "i") {
+          current.onInteract()
           current.clearTransientState()
           current.onCloseScreenshot()
           current.setToolMode((prev) => (prev === "select" ? "none" : "select"))
-          current.onInteract()
         }
 
         if (key === "s") {
+          current.onInteract()
           current.clearTransientState()
           current.onCloseScreenshot()
           current.setToolMode((prev) => (prev === "selection" ? "none" : "selection"))
-          current.onInteract()
         }
 
         if (key === "g") {
+          current.onInteract()
           current.clearTransientState()
           current.onCloseScreenshot()
           current.setToolMode((prev) => (prev === "guides" ? "none" : "guides"))
-          current.onInteract()
         }
 
         if (key === "d") {
+          current.onInteract()
           current.clearTransientState()
           current.onCloseScreenshot()
           current.setToolMode((prev) => (prev === "arrows" ? "none" : "arrows"))
-          current.onInteract()
         }
 
         if (key === "n") {
+          current.onInteract()
           current.clearTransientState()
           current.onCloseScreenshot()
           current.setToolMode((prev) => (prev === "pen" ? "none" : "pen"))
-          current.onInteract()
         }
 
         if (key === "t") {
+          current.onInteract()
           current.clearTransientState()
           current.onCloseScreenshot()
           current.setToolMode((prev) => (prev === "text" ? "none" : "text"))
-          current.onInteract()
         }
 
         if (key === "h") {
@@ -273,15 +301,25 @@ export const useHotkeys = (options: HotkeyOptions) => {
       }
     }
 
+    const clearDoubleEscape = (event: Event) => {
+      if (isInsideMesurer(event.target)) lastEscapeAtRef.current = null
+    }
+
     const roots: EventTarget[] = [target, target.document, target.document.documentElement]
     const overlayRoot = options.overlayRef.current?.getRootNode()
     if (overlayRoot && overlayRoot !== target.document) roots.push(overlayRoot)
 
     const detachKeyDown = attachCapture(roots, "keydown", handleKeyDown as EventListener)
     const detachKeyUp = attachCapture(roots, "keyup", handleKeyUp as EventListener)
+    const detachPointerDown = attachCapture(
+      roots,
+      "pointerdown",
+      clearDoubleEscape as EventListener,
+    )
     return () => {
       detachKeyDown()
       detachKeyUp()
+      detachPointerDown()
     }
   }, [options.enabled, options.eventTarget, options.overlayRef])
 }

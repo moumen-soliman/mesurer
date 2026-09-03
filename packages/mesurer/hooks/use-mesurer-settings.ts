@@ -37,6 +37,7 @@ type UseMesurerSettingsOptions = {
     hoverHighlightEnabled: boolean;
     layoutDetailsEnabled: boolean;
     persistOnReload: boolean;
+    shortcutsEnabled: boolean;
     colorPickerFormats: ColorPickerFormat[];
     colorPickerClickFormat: ColorPickerFormat;
     guideStyle: GuideStyle;
@@ -79,6 +80,9 @@ export const useMesurerSettings = ({
   const [persistOnReload, setPersistOnReload] = useState(
     persistedSettings.persistOnReload ?? defaults.persistOnReload,
   );
+  const [shortcutsEnabled, setShortcutsEnabled] = useState(
+    persistedSettings.shortcutsEnabled ?? defaults.shortcutsEnabled,
+  );
   const [lastToolMode, setLastToolMode] = useState<PersistentToolMode>(
     persistedSettings.lastToolMode ?? "select",
   );
@@ -113,6 +117,7 @@ export const useMesurerSettings = ({
     setHoverHighlightEnabled(defaults.hoverHighlightEnabled);
     setLayoutDetailsEnabled(defaults.layoutDetailsEnabled);
     setPersistOnReload(defaults.persistOnReload);
+    setShortcutsEnabled(defaults.shortcutsEnabled);
     setColorPickerFormats([...defaults.colorPickerFormats]);
     setColorPickerClickFormat(defaults.colorPickerClickFormat);
     toggles.setSnapEnabled(defaults.snapEnabled);
@@ -144,6 +149,7 @@ export const useMesurerSettings = ({
       selectNewGuideEnabled: toggles.selectNewGuideEnabled,
       multiMeasureEnabled: toggles.multiMeasureEnabled,
       persistOnReload,
+      shortcutsEnabled,
       lastToolMode,
       guideStyle,
       rulerSettings,
@@ -163,6 +169,7 @@ export const useMesurerSettings = ({
     layoutDetailsEnabled,
     toggles.multiMeasureEnabled,
     persistOnReload,
+    shortcutsEnabled,
     lastToolMode,
     rulerSettings,
     screenshotSettings,
@@ -194,6 +201,7 @@ export const useMesurerSettings = ({
       setColorPickerClickFormat(settings.colorPickerClickFormat);
     }
     if (settings.persistOnReload !== undefined) setPersistOnReload(settings.persistOnReload);
+    if (settings.shortcutsEnabled !== undefined) setShortcutsEnabled(settings.shortcutsEnabled);
     if (settings.lastToolMode !== undefined) setLastToolMode(settings.lastToolMode);
     if (settings.snapEnabled !== undefined) toggles.setSnapEnabled(settings.snapEnabled);
     if (settings.snapGuidesEnabled !== undefined) {
@@ -240,6 +248,8 @@ export const useMesurerSettings = ({
     setLayoutDetailsEnabled,
     persistOnReload,
     setPersistOnReload,
+    shortcutsEnabled,
+    setShortcutsEnabled,
     lastToolMode,
     setLastToolMode,
     colorPickerFormats,

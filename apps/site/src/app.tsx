@@ -333,6 +333,14 @@ function App() {
             </div>
           </div>
           <div className="flex items-start justify-between gap-8 border-b border-border px-2 py-2">
+            <div className="font-mono text-strong">
+              <code className="code">shortcutsEnabled</code>
+            </div>
+            <div className="max-w-[60%] text-right text-balance text-muted">
+              Enables global keyboard shortcuts
+            </div>
+          </div>
+          <div className="flex items-start justify-between gap-8 border-b border-border px-2 py-2">
             <div className="font-mono text-strong"><code className="code">persistKey</code></div>
             <div className="max-w-[60%] text-right text-balance text-muted">Optional key for isolating persisted workspaces</div>
           </div>
@@ -503,7 +511,7 @@ function App() {
               <code className="code">Esc</code>
             </div>
             <div className="max-w-[60%] text-right text-balance text-muted">
-              Exit the active tool; press twice to exit completely
+              Exit the active tool; press again to minimize Mesurer
             </div>
           </div>
           <div className="flex items-start justify-between gap-8 border-b border-border px-2 py-2">

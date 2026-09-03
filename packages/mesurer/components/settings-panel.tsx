@@ -97,6 +97,9 @@ type SettingsPanelProps = {
   general: {
     persistOnReload: boolean
     setPersistOnReload: Dispatch<SetStateAction<boolean>>
+    shortcutsEnabled: boolean
+    setShortcutsEnabled: Dispatch<SetStateAction<boolean>>
+    onMinimize: () => void
     onResetSettings: () => void
     onClearWorkspace: () => void
   }
@@ -612,7 +615,15 @@ export function SettingsPanel({
   general,
 }: SettingsPanelProps) {
   const releaseChannel = getReleaseChannel()
-  const { persistOnReload, setPersistOnReload, onResetSettings, onClearWorkspace } = general
+  const {
+    persistOnReload,
+    setPersistOnReload,
+    shortcutsEnabled,
+    setShortcutsEnabled,
+    onMinimize,
+    onResetSettings,
+    onClearWorkspace,
+  } = general
   const { settings: screenshotSettings, setSettings: setScreenshotSettings } = camera
   const { settings: rulerSettings, setSettings: setRulerSettings } = rulers
   const { settings: textSettings, setSettings: setTextSettings } = text
@@ -839,6 +850,18 @@ export function SettingsPanel({
       <SectionDivider />
       <SettingsSection id="general" title="General" ariaLabel="General settings">
         <div className="msr:col-span-2"><SettingsSwitch label="Persist" checked={persistOnReload} onChange={setPersistOnReload} /></div>
+        <div className="msr:col-span-2"><SettingsSwitch label="Shortcuts" checked={shortcutsEnabled} onChange={setShortcutsEnabled} /></div>
+        <div className={`msr:col-span-2 msr:grid msr:h-8 ${SETTINGS_COLUMNS} msr:items-center msr:gap-0 msr:text-[12px] msr:text-ink-700`}>
+          <span>Toolbar</span>
+          <button
+            type="button"
+            aria-label="Minimize toolbar"
+            className="msr:h-6 msr:justify-self-end msr:rounded-[5px] msr:border msr:border-ink-200 msr:px-2 msr:text-[11px] msr:text-ink-700 msr:hover:bg-ink-50 msr:focus-visible:outline-none msr:focus-visible:shadow-[inset_0_0_0_1px_#0d99ff]"
+            onClick={onMinimize}
+          >
+            Minimize
+          </button>
+        </div>
         <div className={`msr:col-span-2 msr:grid msr:h-8 ${SETTINGS_COLUMNS} msr:items-center msr:gap-0 msr:text-[12px] msr:text-ink-700`}>
           <span>Version</span>
           <span className="msr:justify-self-end msr:font-mono msr:text-[11px] msr:tabular-nums msr:text-ink-700">

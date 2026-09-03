@@ -64,6 +64,7 @@ export type MesurerProps = {
   hoverHighlightEnabled?: boolean;
   layoutDetailsEnabled?: boolean;
   persistOnReload?: boolean;
+  shortcutsEnabled?: boolean;
   portalTarget?: HTMLElement | ShadowRoot;
   persistKey?: string;
   colorPickerFormats?: ColorPickerFormat[];
@@ -90,6 +91,7 @@ export function MesurerClient({
   hoverHighlightEnabled,
   layoutDetailsEnabled,
   persistOnReload,
+  shortcutsEnabled: shortcutsEnabledDefault,
   portalTarget,
   persistKey,
   colorPickerFormats,
@@ -296,6 +298,8 @@ export function MesurerClient({
     setArrowPreviewEnd,
     toolbarActive,
     setToolbarActive,
+    minimized,
+    setMinimized,
     settingsOpen,
     setSettingsOpen,
     xrayVisible,
@@ -303,7 +307,12 @@ export function MesurerClient({
     guideOrientation,
     setGuideOrientation,
   } = workspace;
-  const textInspector = useTextInspector(portalTarget, toolMode, settingsOpen);
+  const textInspector = useTextInspector(
+    portalTarget,
+    toolMode,
+    settingsOpen,
+    minimized,
+  );
   const textDraftInputRef = useRef<HTMLElement | null>(null);
   const textDraftRef = useRef(textDraft);
   const committedTextEditorsRef = useRef(new WeakSet<HTMLElement>());
@@ -324,6 +333,8 @@ export function MesurerClient({
     setLayoutDetailsEnabled: setSettingsLayoutDetailsEnabled,
     persistOnReload: settingsPersistOnReload,
     setPersistOnReload: setSettingsPersistOnReload,
+    shortcutsEnabled: settingsShortcutsEnabled,
+    setShortcutsEnabled: setSettingsShortcutsEnabled,
     lastToolMode: settingsLastToolMode,
     setLastToolMode: setSettingsLastToolMode,
     colorPickerFormats: settingsColorFormats,
@@ -352,6 +363,7 @@ export function MesurerClient({
       hoverHighlightEnabled,
       layoutDetailsEnabled,
       persistOnReload,
+      shortcutsEnabled: shortcutsEnabledDefault,
       colorPickerFormats,
       colorPickerClickFormat,
       guideStyle: guideStyleDefault,
@@ -603,7 +615,10 @@ export function MesurerClient({
     captureVisibleTab,
     settings: settingsScreenshot,
     setEnabled: (value) => setEnabledWithHistory(value),
-    setToolbarActive,
+    setToolbarActive: (active) => {
+      if (active) setMinimized(false);
+      setToolbarActive(active);
+    },
     onPrepare: () => {
       colorPicker.setActive(false);
       setSettingsOpen(false);
@@ -685,6 +700,7 @@ export function MesurerClient({
     settingsOpen,
     toolMode,
     toolbarActive,
+    minimized,
     snapGuidesEnabled,
     guides,
     toolbarRef,
@@ -908,12 +924,27 @@ export function MesurerClient({
     handleTextPointerDown,
     handleTextKeyDown,
   } = annotationCallbacks;
+  const activateToolbar = useCallback(() => {
+    setToolbarActive(true);
+  }, [setToolbarActive]);
+  const restoreToolbar = useCallback(() => {
+    setMinimized(false);
+    setToolbarActive(true);
+  }, [setMinimized, setToolbarActive]);
+  const minimizeMesurer = useCallback(() => {
+    setSettingsOpen(false);
+    colorPicker.setActive(false);
+    screenshot.closeUi();
+    setMinimized(true);
+  }, [colorPicker, screenshot, setMinimized, setSettingsOpen]);
   const { clearTransientState } = useInteractionLifecycle({
     enabled,
     toolMode,
     xrayVisible,
     rulersVisible,
     toolbarActive,
+    minimized,
+    shortcutsEnabled: settingsShortcutsEnabled,
     settingsOpen,
     ownerDocument,
     ownerWindow,
@@ -975,8 +1006,10 @@ export function MesurerClient({
     setEnabled: setEnabledPersisted,
     setRulersVisible,
     setGuideOrientation,
-    onInteract: () => setToolbarActive(true),
+    onInteract: activateToolbar,
+    onMinimize: minimizeMesurer,
     onToggleSettings: toggleSettings,
+    dismissInspectorPins: () => textInspector.clear(),
   });
   clearWorkspaceTransientRef.current = clearTransientState;
   const removeHeldDistance = useCallback(
@@ -1018,7 +1051,7 @@ export function MesurerClient({
     scheduleGuideDragHold,
     clearGuideDragHold,
   });
-  const overlayInteractive = enabled && !settingsOpen
+  const overlayInteractive = enabled && !settingsOpen && !minimized
   const movingGroupRect = (() => {
     const showGroup =
       selectedArrowIds.length +
@@ -1072,7 +1105,7 @@ export function MesurerClient({
         ownerWindow,
         visible: enabled && rulersVisible,
         settings: settingsRulerSettings,
-        interactive: !settingsOpen,
+        interactive: !settingsOpen && !minimized,
         forceVisible: settingsOpen,
         onStartGuide: startGuideFromRuler,
         onMoveGuide: moveGuideFromRuler,
@@ -1229,7 +1262,9 @@ export function MesurerClient({
       }}
       toolbar={{
         eventTarget: ownerWindow,
-        onInteract: () => setToolbarActive(true),
+        minimized,
+        onInteract: activateToolbar,
+        onRestore: restoreToolbar,
         onCancelTransient: clearTransientState,
         tools: {
           mode: toolMode,
@@ -1329,6 +1364,9 @@ export function MesurerClient({
               general={{
                 persistOnReload: settingsPersistOnReload,
                 setPersistOnReload: setSettingsPersistOnReload,
+                shortcutsEnabled: settingsShortcutsEnabled,
+                setShortcutsEnabled: setSettingsShortcutsEnabled,
+                onMinimize: minimizeMesurer,
                 onResetSettings: resetSettings,
                 onClearWorkspace: clearWorkspace,
               }}

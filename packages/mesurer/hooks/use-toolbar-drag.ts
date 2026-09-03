@@ -127,15 +127,20 @@ export const useToolbarDrag = (initialPosition: Point, eventTarget: Window) => {
     [disableTextSelection, eventTarget, position.x, position.y, restoreTextSelection],
   )
 
+  const consumeDragClick = useCallback(() => {
+    if (!suppressClickRef.current) return false
+    suppressClickRef.current = false
+    return true
+  }, [])
+
   const onClickCapture = useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
-      if (!suppressClickRef.current) return
+      if (!consumeDragClick()) return
       event.preventDefault()
       event.stopPropagation()
-      suppressClickRef.current = false
     },
-    [],
+    [consumeDragClick],
   )
 
-  return { position, onPointerDown, onClickCapture }
+  return { position, onPointerDown, onClickCapture, consumeDragClick }
 }
