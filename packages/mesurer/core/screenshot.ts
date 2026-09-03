@@ -91,10 +91,14 @@ export const downloadPng = (
   link.href = url;
   link.download = filename;
   link.rel = "noopener";
+  link.style.position = "fixed";
+  link.style.left = "-9999px";
   ownerDocument.documentElement.append(link);
   link.click();
-  link.remove();
-  ownerWindow.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  ownerWindow.setTimeout(() => {
+    link.remove();
+    URL.revokeObjectURL(url);
+  }, 1000);
 };
 
 export const hideNodesForCapture = (nodes: Array<HTMLElement | null>) => {

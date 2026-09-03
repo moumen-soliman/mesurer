@@ -122,6 +122,7 @@
 .mesurer-toolbar-minimize-track {
   display: flex;
   flex: none;
+  pointer-events: none;
   transform: translateX(0);
 }
 
@@ -139,6 +140,10 @@
 
 .mesurer-toolbar-minimize-slot:not([data-open="true"]) {
   pointer-events: none;
+}
+
+.mesurer-toolbar-minimize-slot[data-open="true"] {
+  pointer-events: auto;
 }
 
 .mesurer-toolbar-motion:not([data-resizing="true"])

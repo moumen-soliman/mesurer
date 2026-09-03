@@ -2,6 +2,8 @@ import type { Dispatch, SetStateAction } from "react"
 import { useLayoutEffect, useRef } from "react"
 import {
   isInsideMesurer,
+  isMesurerKeyboardBridge,
+  isMesurerKeyboardOwned,
   isOverlayEscapeConsumed,
   isTypingInMesurer,
   isTypingInPage,
@@ -71,14 +73,17 @@ export const useHotkeys = (options: HotkeyOptions) => {
   useLayoutEffect(() => {
     const target = options.eventTarget
     const seen = new WeakSet<Event>()
-    const handleKeyDown = (event: KeyboardEvent) => {
+    const handleKeyDown = (event: KeyboardEvent, bridged = false) => {
       if (seen.has(event)) return
       seen.add(event)
       const current = optionsRef.current
+      if (!bridged && isMesurerKeyboardOwned(target) && isTypingInPage(target)) return
       if (isEscapeKey(event)) {
         if (event.repeat) return
         if (current.minimized) return
-        if (isTypingInPage(target)) {
+        const pageOwnsKeyboard =
+          isTypingInPage(target) && !isMesurerKeyboardOwned(target)
+        if (pageOwnsKeyboard) {
           lastEscapeAtRef.current = null
           if (current.isToolbarIdle()) return
         }
@@ -133,7 +138,7 @@ export const useHotkeys = (options: HotkeyOptions) => {
       if (isTypingInMesurer(event, target)) {
         return
       }
-      if (isTypingInPage(target)) return
+      if (isTypingInPage(target) && !isMesurerKeyboardOwned(target)) return
       if (current.minimized) return
 
       if (!current.shortcutsEnabled) return
@@ -295,10 +300,29 @@ export const useHotkeys = (options: HotkeyOptions) => {
       }
     }
 
-    const handleKeyUp = (event: KeyboardEvent) => {
+    const handleKeyUp = (event: KeyboardEvent, bridged = false) => {
+      if (!bridged && isMesurerKeyboardOwned(target) && isTypingInPage(target)) return
       if (event.key === "Alt") {
         optionsRef.current.setAltPressed(false)
       }
+    }
+
+    const handleKeyboardBridge = (event: MessageEvent) => {
+      if (event.origin !== target.location.origin || !isMesurerKeyboardOwned(target)) return
+      const data = event.data
+      if (!isMesurerKeyboardBridge(data)) return
+      const bridged = new KeyboardEvent(data.eventType, {
+        key: data.key,
+        code: data.code,
+        location: data.location,
+        repeat: data.repeat,
+        altKey: data.altKey,
+        ctrlKey: data.ctrlKey,
+        metaKey: data.metaKey,
+        shiftKey: data.shiftKey,
+      })
+      if (data.eventType === "keydown") handleKeyDown(bridged, true)
+      else handleKeyUp(bridged, true)
     }
 
     const clearDoubleEscape = (event: Event) => {
@@ -316,10 +340,12 @@ export const useHotkeys = (options: HotkeyOptions) => {
       "pointerdown",
       clearDoubleEscape as EventListener,
     )
+    target.addEventListener("message", handleKeyboardBridge)
     return () => {
       detachKeyDown()
       detachKeyUp()
       detachPointerDown()
+      target.removeEventListener("message", handleKeyboardBridge)
     }
   }, [options.enabled, options.eventTarget, options.overlayRef])
 }

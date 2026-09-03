@@ -211,7 +211,6 @@ export const useInteractionLifecycle = (options: Options) => {
 
   useOverlayKeyboard({
     eventTarget: options.ownerWindow,
-    overlayRef: options.overlayRef,
     overlayActive: keyboardOwned,
   });
 

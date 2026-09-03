@@ -1,69 +1,72 @@
-import { useLayoutEffect, type RefObject } from "react"
+import { useLayoutEffect } from "react"
 import { installKeyboardGate } from "../core/keyboard-gate"
 import {
-  blurPageFocus,
   getDeepActiveElement,
-  isEditableElement,
   isInsideMesurer,
-  isMesurerKeyboardEvent,
+  isEditableElement,
+  isMesurerUiNode,
   setMesurerKeyboardOwned,
 } from "../core/keyboard-ownership"
 
-const isTypingInPageField = (eventTarget: Window) => {
-  const active = getDeepActiveElement(eventTarget)
-  return isEditableElement(active) && !isInsideMesurer(active)
-}
-
 export const useOverlayKeyboard = ({
   eventTarget,
-  overlayRef,
   overlayActive,
 }: {
   eventTarget: Window
-  overlayRef: RefObject<HTMLElement | null>
   overlayActive: boolean
 }) => {
   useLayoutEffect(() => {
     installKeyboardGate(eventTarget)
-    const overlay = overlayRef.current
-    const typingInPage = isTypingInPageField(eventTarget)
-    const owned = overlayActive && !typingInPage
+    const claimedRef = { current: false }
+    const pageEditorPointerRef = { current: false }
+    const owned =
+      overlayActive &&
+      (claimedRef.current || isInsideMesurer(getDeepActiveElement(eventTarget)))
     setMesurerKeyboardOwned(eventTarget.document, owned)
-    if (owned && overlay && !isInsideMesurer(getDeepActiveElement(eventTarget))) {
-      blurPageFocus(eventTarget)
-      overlay.focus({ preventScroll: true })
-    }
 
-    const onFocusIn = (event: FocusEvent) => {
+    const onFocusIn = () => {
       if (!overlayActive) return
       const active = getDeepActiveElement(eventTarget)
-      if (isEditableElement(active) && !isInsideMesurer(active)) {
-        if (!event.isTrusted) {
-          setMesurerKeyboardOwned(eventTarget.document, true)
-          const root = overlayRef.current
-          if (!root) return
-          blurPageFocus(eventTarget)
-          root.focus({ preventScroll: true })
-          return
-        }
-        setMesurerKeyboardOwned(eventTarget.document, false)
-        return
-      }
       if (isInsideMesurer(active)) {
+        claimedRef.current = true
         setMesurerKeyboardOwned(eventTarget.document, true)
         return
       }
-      if (isMesurerKeyboardEvent(event, eventTarget)) return
-      const root = overlayRef.current
-      if (!root) return
-      setMesurerKeyboardOwned(eventTarget.document, true)
-      blurPageFocus(eventTarget)
-      root.focus({ preventScroll: true })
+      if (active instanceof Element && isEditableElement(active)) {
+        if (pageEditorPointerRef.current || !claimedRef.current) {
+          claimedRef.current = false
+          setMesurerKeyboardOwned(eventTarget.document, false)
+        }
+        pageEditorPointerRef.current = false
+        return
+      }
+      setMesurerKeyboardOwned(eventTarget.document, claimedRef.current)
+    }
+    const onPointerDown = (event: PointerEvent) => {
+      if (!overlayActive) return
+      const path = event.composedPath()
+      const pageEditor = path.some(
+        (node) => isEditableElement(node) && !isInsideMesurer(node),
+      )
+      if (pageEditor) {
+        pageEditorPointerRef.current = true
+        claimedRef.current = false
+        setMesurerKeyboardOwned(eventTarget.document, false)
+        return
+      }
+      pageEditorPointerRef.current = false
+      if (path.some((node) => isMesurerUiNode(node))) {
+        claimedRef.current = true
+        setMesurerKeyboardOwned(eventTarget.document, true)
+      }
     }
     eventTarget.document.addEventListener("focusin", onFocusIn, true)
+    eventTarget.document.addEventListener("pointerdown", onPointerDown, true)
     return () => {
+      claimedRef.current = false
       setMesurerKeyboardOwned(eventTarget.document, false)
       eventTarget.document.removeEventListener("focusin", onFocusIn, true)
+      eventTarget.document.removeEventListener("pointerdown", onPointerDown, true)
     }
-  }, [eventTarget, overlayActive, overlayRef])
+  }, [eventTarget, overlayActive])
 }

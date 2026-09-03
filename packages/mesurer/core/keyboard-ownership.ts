@@ -1,4 +1,75 @@
 export const MESURER_KEYBOARD_ATTR = "data-mesurer-kb"
+export const MESURER_KEYBOARD_BRIDGE = "__MESURER_KEYBOARD_BRIDGE__"
+
+type MesurerKeyboardBridgeEvent = {
+  type: typeof MESURER_KEYBOARD_BRIDGE
+  eventType: "keydown" | "keyup"
+  key: string
+  code: string
+  location: number
+  repeat: boolean
+  altKey: boolean
+  ctrlKey: boolean
+  metaKey: boolean
+  shiftKey: boolean
+}
+
+const MESURER_BRIDGED_KEYS = new Set([
+  "1",
+  "2",
+  "a",
+  "c",
+  "d",
+  "escape",
+  "g",
+  "h",
+  "i",
+  "n",
+  "p",
+  "r",
+  "s",
+  "t",
+  "v",
+  "x",
+])
+
+export const isMesurerKeyboardBridgeKey = (
+  key: string,
+  modifiers: Pick<
+    MesurerKeyboardBridgeEvent,
+    "altKey" | "ctrlKey" | "metaKey" | "shiftKey"
+  >,
+) =>
+  MESURER_BRIDGED_KEYS.has(key.toLowerCase()) &&
+  !modifiers.altKey &&
+  !modifiers.ctrlKey &&
+  !modifiers.metaKey &&
+  !modifiers.shiftKey
+
+export const isMesurerKeyboardBridge = (
+  value: unknown,
+): value is MesurerKeyboardBridgeEvent => {
+  if (!value || typeof value !== "object") return false
+  const event = value as Partial<MesurerKeyboardBridgeEvent>
+  return (
+    event.type === MESURER_KEYBOARD_BRIDGE &&
+    (event.eventType === "keydown" || event.eventType === "keyup") &&
+    typeof event.key === "string" &&
+    typeof event.code === "string" &&
+    typeof event.location === "number" &&
+    typeof event.repeat === "boolean" &&
+    typeof event.altKey === "boolean" &&
+    typeof event.ctrlKey === "boolean" &&
+    typeof event.metaKey === "boolean" &&
+    typeof event.shiftKey === "boolean" &&
+    isMesurerKeyboardBridgeKey(event.key, {
+      altKey: event.altKey ?? false,
+      ctrlKey: event.ctrlKey ?? false,
+      metaKey: event.metaKey ?? false,
+      shiftKey: event.shiftKey ?? false,
+    })
+  )
+}
 
 export const isEditableElement = (node: EventTarget | null) => {
   if (!(node instanceof Element)) return false
@@ -77,6 +148,9 @@ export const setMesurerKeyboardOwned = (document: Document, owned: boolean) => {
   if (owned) document.documentElement.setAttribute(MESURER_KEYBOARD_ATTR, "1")
   else document.documentElement.removeAttribute(MESURER_KEYBOARD_ATTR)
 }
+
+export const isMesurerKeyboardOwned = (eventTarget: Window) =>
+  eventTarget.document.documentElement.hasAttribute(MESURER_KEYBOARD_ATTR)
 
 export const blurPageFocus = (eventTarget: Window) => {
   const active = getDeepActiveElement(eventTarget)

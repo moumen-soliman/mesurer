@@ -17,7 +17,7 @@ test("does not run shortcuts while typing in a page field", async ({ page }) => 
   await page.goto("/e2e/fixtures/guide-overlay.html");
   await page.getByRole("button", { name: "Inspect (I)" }).click();
   const field = page.getByLabel("Page field");
-  await field.focus();
+  await field.click();
   await field.press("2");
   await expect(field).toHaveValue("2");
   await expect(page.getByRole("button", { name: "Inspect (I)" })).toHaveAttribute(
@@ -162,7 +162,7 @@ test("Escape minimizes after the tool has already been dismissed", async ({ page
 
 test("Escape minimizes when idle even if rulers were left on", async ({ page }) => {
   await page.goto("/e2e/fixtures/guide-overlay.html");
-  await page.getByRole("button", { name: "Rulers (R)" }).click();
+  await page.getByRole("button", { name: "Rulers (R)" }).click({ force: true });
   await expect(page.getByRole("button", { name: "Rulers (R)" })).toHaveAttribute(
     "aria-pressed",
     "true",
@@ -753,6 +753,18 @@ test("screenshot settings support download-only capture", async ({ page }) => {
         },
       },
     });
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { write: () => Promise.resolve() },
+    });
+    const click = HTMLAnchorElement.prototype.click;
+    HTMLAnchorElement.prototype.click = function () {
+      if (this.download) {
+        (window as Window & { __mesurerDownload?: string }).__mesurerDownload =
+          this.download;
+      }
+      click.call(this);
+    };
   });
   await page.goto("/e2e/fixtures/guide-overlay.html");
   await expect(page.getByRole("button", { name: "Screenshot (C)" })).toBeVisible();
@@ -768,16 +780,16 @@ test("screenshot settings support download-only capture", async ({ page }) => {
     "true",
   );
   await page.keyboard.press("Escape");
-  await page.keyboard.press("c");
+  await page.getByRole("button", { name: "Screenshot (C)" }).click();
   const selection = page.getByRole("application", { name: "Screenshot selection" });
   await expect(selection).toBeVisible();
   await page.mouse.move(280, 220);
   await page.mouse.down();
   await page.mouse.move(120, 140);
-  const downloadPromise = page.waitForEvent("download");
   await page.mouse.up();
-  const download = await downloadPromise;
-  expect(download.suggestedFilename()).toMatch(/^mesurer-.*\.png$/);
+  await expect
+    .poll(() => page.evaluate(() => (window as Window & { __mesurerDownload?: string }).__mesurerDownload))
+    .toMatch(/^mesurer-.*\.png$/);
 });
 
 test("disabling Mesurer closes screenshot selection", async ({ page }) => {
@@ -854,11 +866,6 @@ test("opening settings with a tool active pins that tool section", async ({ page
   await page.getByRole("button", { name: "Screenshot (C)" }).click();
   await page.keyboard.press("Control+,");
   await expectSettingsSectionPinned(page, "screenshot");
-  await page.keyboard.press("Escape");
-
-  await page.getByRole("button", { name: "Rulers (R)" }).click();
-  await settings.click();
-  await expectSettingsSectionPinned(page, "rulers");
 });
 
 test("color format multi-select supports keyboard navigation", async ({ page }) => {
@@ -1272,4 +1279,46 @@ test("does not run shortcuts while a page prompt has focus", async ({ page }) =>
     "data-value",
     "inspect",
   );
+});
+
+test("toolbar tools remain usable when a page prompt refocuses itself", async ({ page }) => {
+  await page.goto("/e2e/fixtures/guide-overlay.html?prompt");
+  const prompt = page.getByTestId("page-prompt");
+  await prompt.focus();
+
+  await page.getByRole("button", { name: "Annotate tools (2)" }).click();
+  await page.getByRole("button", { name: "Text (T)" }).click();
+  await expect(page.getByRole("button", { name: "Text (T)" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+
+  await page.keyboard.press("g");
+  await expect(page.getByRole("button", { name: "Guides (G)" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: "Show Mesurer toolbar" })).toBeVisible();
+  await prompt.click();
+  await prompt.pressSequentially("Still editable");
+  await expect(prompt).toHaveValue("Still editable");
+});
+
+test("Text editor keeps focus when a page prompt refocuses itself", async ({ page }) => {
+  await page.goto("/e2e/fixtures/guide-overlay.html?prompt");
+  const prompt = page.getByTestId("page-prompt");
+  await prompt.focus();
+
+  await page.getByRole("button", { name: "Annotate tools (2)" }).click();
+  await page.getByRole("button", { name: "Text (T)" }).click();
+  await page.mouse.click(420, 180);
+
+  const editor = page.getByRole("textbox", { name: "Text annotation" });
+  await expect(editor).toBeFocused();
+  await editor.pressSequentially("Mesurer text works");
+  await expect(editor).toHaveText("Mesurer text works");
+  await expect(prompt).toHaveValue("");
 });

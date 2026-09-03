@@ -10,6 +10,10 @@ import {
 } from "react"
 import type { TextAnnotation } from "../core/types"
 import {
+  isInsideMesurer,
+  isMesurerKeyboardOwned,
+} from "../core/keyboard-ownership"
+import {
   boxCenter,
   isWidthHandle,
   resizeWidthBox,
@@ -189,6 +193,20 @@ export const TextLayer = memo(function TextLayer({
   const handleEditorBlur = (event: FocusEvent<HTMLElement>) => {
     const next = event.relatedTarget
     if (next instanceof HTMLElement && next.closest("[data-mesurer-text], [data-mesurer-text-input]")) return
+    const view = event.currentTarget.ownerDocument.defaultView
+    if (view && isMesurerKeyboardOwned(view) && !isInsideMesurer(next)) {
+      const editor = event.currentTarget
+      requestAnimationFrame(() => {
+        if (
+          editor.isConnected &&
+          draftInputRef.current === editor &&
+          isMesurerKeyboardOwned(view)
+        ) {
+          editor.focus({ preventScroll: true })
+        }
+      })
+      return
+    }
     onDraftBlur()
   }
 
