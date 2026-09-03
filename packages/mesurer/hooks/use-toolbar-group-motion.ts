@@ -1,9 +1,13 @@
 import { useCallback, useLayoutEffect, useRef, type RefObject } from "react"
 import {
+  lerp,
   nearlyEqual,
+  progress,
   syncToolbarLayoutWidths,
   TOOLBAR_MOTION_FALLBACK_MS,
+  TOOLBAR_RADIUS,
   toolbarMotionTiming,
+  toolbarRadius,
   transformScaleX,
   transformTranslateX,
 } from "../core/toolbar-motion"
@@ -12,26 +16,34 @@ type ToolGroup = "inspect" | "annotate"
 
 type Playback = {
   layoutWidth: number
-  duration: number
-  animations: Animation[]
+  collapse: boolean
+  group: boolean
+  clipFrom: number
+  clipTo: number
+  radiusFrom: number
+  radiusTo: number
 }
 
 type Pose = {
   scaleX: number
+  clipScale: number
+  radius: number
   trailX: number
   trackX: number
   collapseX: number
-  duration: number
+  stageW: number
+  expandedW: number
+  collapse: boolean
 }
 
 type Nodes = {
   chrome: HTMLElement
+  clip: HTMLElement
+  surface: HTMLElement
   track: HTMLElement
   trailing: HTMLElement
   collapse: HTMLElement
 }
-
-const MIN_INTERRUPT_MS = 64
 
 const readNodes = (
   motion: HTMLElement,
@@ -40,61 +52,112 @@ const readNodes = (
   collapseStage: HTMLElement,
 ): Nodes | null => {
   const chrome = motion.querySelector(".mesurer-toolbar-chrome")
+  const clip = motion.querySelector(".mesurer-toolbar-clip")
+  const surface = motion.querySelector(".mesurer-toolbar-surface")
   const track = stage.querySelector(".mesurer-toolbar-tool-track")
   const collapse = collapseStage.querySelector(".mesurer-toolbar-minimize-track")
   if (
     !(chrome instanceof HTMLElement) ||
+    !(clip instanceof HTMLElement) ||
+    !(surface instanceof HTMLElement) ||
     !(track instanceof HTMLElement) ||
     !(collapse instanceof HTMLElement)
   ) {
     return null
   }
-  return { chrome, track, trailing, collapse }
+  return { chrome, clip, surface, track, trailing, collapse }
 }
 
-const clearMotionStyles = (motion: HTMLElement, nodes: Nodes, collapseStage: HTMLElement) => {
-  delete motion.dataset.resizing
+const commitAndCancel = (node: HTMLElement) => {
+  for (const animation of node.getAnimations()) {
+    try {
+      animation.commitStyles()
+    } catch {
+      /* animation may already be finished */
+    }
+    animation.cancel()
+  }
+}
+
+const commitMotion = (nodes: Nodes, stage: HTMLElement, collapseStage: HTMLElement) => {
+  for (const node of Object.values(nodes)) commitAndCancel(node)
+  commitAndCancel(stage)
+  commitAndCancel(collapseStage)
+}
+
+const clearMotionStyles = (
+  motion: HTMLElement,
+  nodes: Nodes,
+  stage: HTMLElement,
+  collapseStage: HTMLElement,
+) => {
+  commitMotion(nodes, stage, collapseStage)
   collapseStage.style.width = ""
+  stage.style.width = ""
+  nodes.chrome.style.borderRadius = ""
+  nodes.clip.style.borderRadius = ""
   for (const node of Object.values(nodes)) {
     node.style.transition = ""
     node.style.transform = ""
     node.style.willChange = ""
   }
+  stage.style.transition = ""
+  collapseStage.style.transition = ""
+  delete motion.dataset.resizing
 }
 
-const cancelPlayback = (play: Playback | null) => {
-  if (!play) return
-  for (const animation of play.animations) animation.cancel()
-}
+const contentScaleFor = (clipScale: number) => (clipScale === 0 ? 1 : 1 / clipScale)
 
 const applyPose = (
   nodes: Nodes,
-  pose: Pick<Pose, "scaleX" | "trailX" | "trackX" | "collapseX">,
+  pose: Pick<Pose, "scaleX" | "clipScale" | "radius" | "trailX" | "trackX" | "collapseX">,
+  collapse: boolean,
 ) => {
   nodes.chrome.style.transform = `scaleX(${pose.scaleX})`
   nodes.trailing.style.transform = `translateX(${pose.trailX}px)`
   nodes.track.style.transform = `translateX(${pose.trackX}px)`
   nodes.collapse.style.transform = `translateX(${pose.collapseX}px)`
+  nodes.chrome.style.borderRadius = toolbarRadius(pose.radius, pose.scaleX)
+  if (!collapse) {
+    nodes.clip.style.transform = ""
+    nodes.surface.style.transform = ""
+    nodes.clip.style.borderRadius = ""
+    return
+  }
+  nodes.clip.style.transform = `scaleX(${pose.clipScale})`
+  nodes.surface.style.transform = `scaleX(${contentScaleFor(pose.clipScale)})`
+  nodes.clip.style.borderRadius = toolbarRadius(pose.radius, pose.clipScale)
 }
 
-const captureInterrupt = (motion: HTMLElement, nodes: Nodes, play: Playback): Pose => {
+const captureInterrupt = (
+  motion: HTMLElement,
+  nodes: Nodes,
+  stage: HTMLElement,
+  collapseStage: HTMLElement,
+  play: Playback,
+): Pose => {
   const view = motion.ownerDocument.defaultView
   const computed = view?.getComputedStyle.bind(view) ?? getComputedStyle
-  const elapsed = Number(play.animations[0]?.currentTime)
-  const remaining = Number.isFinite(elapsed)
-    ? Math.max(MIN_INTERRUPT_MS, play.duration - elapsed)
-    : Math.max(MIN_INTERRUPT_MS, play.duration)
   const nextWidth = motion.offsetWidth
   const scaleX = transformScaleX(computed(nodes.chrome).transform)
   const trailX = transformTranslateX(computed(nodes.trailing).transform)
   const trackX = transformTranslateX(computed(nodes.track).transform)
   const collapseX = transformTranslateX(computed(nodes.collapse).transform)
+  const nextScale = nextWidth > 0 ? (play.layoutWidth * scaleX) / nextWidth : 1
   return {
-    scaleX: nextWidth > 0 ? (play.layoutWidth * scaleX) / nextWidth : 1,
-    trailX: trailX + (play.layoutWidth - nextWidth),
+    scaleX: play.group ? 1 : nextScale,
+    clipScale: play.collapse ? nextScale : 1,
+    radius: lerp(
+      play.radiusFrom,
+      play.radiusTo,
+      progress(scaleX, play.clipFrom, play.clipTo),
+    ),
+    trailX: play.group || play.collapse ? trailX : trailX + (play.layoutWidth - nextWidth),
     trackX,
     collapseX,
-    duration: remaining,
+    stageW: stage.getBoundingClientRect().width,
+    expandedW: collapseStage.getBoundingClientRect().width,
+    collapse: play.collapse,
   }
 }
 
@@ -108,7 +171,20 @@ const animateTransform = (
   node.animate([{ transform: from }, { transform: to }], {
     duration,
     easing,
-    fill: "forwards",
+    fill: "both",
+  })
+
+const animateWidth = (
+  node: HTMLElement,
+  from: number,
+  to: number,
+  duration: number,
+  easing: string,
+) =>
+  node.animate([{ width: `${from}px` }, { width: `${to}px` }], {
+    duration,
+    easing,
+    fill: "both",
   })
 
 export const useToolbarGroupMotion = ({
@@ -142,6 +218,7 @@ export const useToolbarGroupMotion = ({
   const minimizedRef = useRef(minimized)
   const playRef = useRef<Playback | null>(null)
   const interruptRef = useRef<Pose | null>(null)
+  const genRef = useRef(0)
 
   const markReady = useCallback(() => {
     readyRef.current = true
@@ -173,6 +250,8 @@ export const useToolbarGroupMotion = ({
       return
     }
 
+    const gen = ++genRef.current
+
     syncToolbarLayoutWidths({
       stage,
       collapseStage,
@@ -180,80 +259,114 @@ export const useToolbarGroupMotion = ({
       annotatePanel,
       expandedPanel,
       iconSlot,
+      destGroup: toolGroup,
     })
 
     const fromMinimized = minimizedRef.current
+    const fromGroup = groupRef.current
     const closing = !fromMinimized && minimized
+    const opening = fromMinimized && !minimized
+    const interrupt = interruptRef.current
+    interruptRef.current = null
     const expandedWidth =
       parseFloat(collapseStage.style.getPropertyValue("--msr-expanded-w")) || 0
     const iconWidth =
       parseFloat(collapseStage.style.getPropertyValue("--msr-icon-w")) || 0
-    if (closing && expandedWidth > 0) {
-      collapseStage.style.width = `${expandedWidth}px`
-      void collapseStage.offsetWidth
-    } else {
-      collapseStage.style.width = ""
-    }
-
-    const toWidth = motion.offsetWidth
     const inspectWidth =
       parseFloat(stage.style.getPropertyValue("--msr-inspect-w")) || 0
-    const toTrack = toolGroup === "annotate" ? -inspectWidth : 0
-    const toCollapse = minimized ? -expandedWidth : 0
-    const interrupt = interruptRef.current
-    interruptRef.current = null
-
-    const fromWidth = barWidthRef.current
-    const fromGroup = groupRef.current
-    const padding = Math.max(0, toWidth - collapseStage.offsetWidth)
-    const closeScale =
-      closing && toWidth > 0 && iconWidth > 0 ? (iconWidth + padding) / toWidth : 1
-    const fromScale = interrupt
-      ? interrupt.scaleX
-      : closing
-        ? 1
-        : fromWidth > 0 && toWidth > 0
-          ? fromWidth / toWidth
-          : 1
-    const toScale = closing ? closeScale : 1
-    const fromTrail = interrupt
-      ? interrupt.trailX
-      : closing
-        ? 0
-        : fromWidth - toWidth
+    const annotateWidth =
+      parseFloat(stage.style.getPropertyValue("--msr-annotate-w")) || 0
+    const toStageW = toolGroup === "annotate" ? annotateWidth : inspectWidth
     const fromTrack = interrupt
       ? interrupt.trackX
       : fromGroup === "annotate"
         ? -inspectWidth
         : 0
+    const toTrack = toolGroup === "annotate" ? -inspectWidth : 0
+    const fromStageW = interrupt
+      ? interrupt.stageW
+      : fromGroup === "annotate"
+        ? annotateWidth
+        : inspectWidth
+    const fromExpandedW = interrupt
+      ? interrupt.expandedW
+      : expandedWidth > 0 && toStageW > 0 && fromStageW > 0
+        ? expandedWidth - toStageW + fromStageW
+        : expandedWidth
+    const collapseMotion = closing || opening || Boolean(interrupt?.collapse)
+    const groupSwitch =
+      !collapseMotion &&
+      fromStageW > 0 &&
+      toStageW > 0 &&
+      (Boolean(interrupt && !interrupt.collapse) ||
+        fromGroup !== toolGroup ||
+        !nearlyEqual(fromStageW, toStageW) ||
+        !nearlyEqual(fromTrack, toTrack))
+    if (closing && expandedWidth > 0) {
+      stage.style.width = ""
+      collapseStage.style.width = `${expandedWidth}px`
+      void collapseStage.offsetWidth
+    } else if (groupSwitch) {
+      stage.style.width = `${fromStageW}px`
+      collapseStage.style.width = `${fromExpandedW}px`
+      void stage.offsetWidth
+      void collapseStage.offsetWidth
+    } else {
+      stage.style.width = ""
+      collapseStage.style.width = ""
+    }
+
+    const toWidth = motion.offsetWidth
+    const toCollapse = minimized ? -expandedWidth : 0
+
+    const fromWidth = barWidthRef.current
+    const padding = Math.max(0, toWidth - collapseStage.offsetWidth)
+    const visualIconWidth = iconWidth + padding
+    const closeScale =
+      toWidth > 0 && visualIconWidth > 0 ? visualIconWidth / toWidth : 1
+    const fromScale = interrupt
+      ? interrupt.scaleX
+      : groupSwitch || !(fromWidth > 0 && toWidth > 0)
+        ? 1
+        : fromWidth / toWidth
+    const toScale = minimized ? closeScale : 1
+    const fromClip = interrupt ? interrupt.clipScale : collapseMotion ? fromScale : 1
+    const toClip = collapseMotion ? toScale : 1
+    const fromTrail = interrupt
+      ? interrupt.trailX
+      : collapseMotion || groupSwitch
+        ? 0
+        : fromWidth - toWidth
     const fromCollapse = interrupt
       ? interrupt.collapseX
       : fromMinimized
         ? -expandedWidth
         : 0
+    const fromRadius = interrupt ? interrupt.radius : TOOLBAR_RADIUS
+    const toRadius = TOOLBAR_RADIUS
     const timing = toolbarMotionTiming(
       getComputedStyle(motion).getPropertyValue("--msr-toolbar-motion").trim() ||
         `${TOOLBAR_MOTION_FALLBACK_MS}ms ease`,
     )
-    const duration = interrupt ? interrupt.duration : timing.duration
+    const duration = timing.duration
     const atRest =
       nearlyEqual(fromScale, toScale, 0.002) &&
+      nearlyEqual(fromClip, toClip, 0.002) &&
       nearlyEqual(fromTrail, 0) &&
       nearlyEqual(fromTrack, toTrack) &&
-      nearlyEqual(fromCollapse, toCollapse)
+      nearlyEqual(fromCollapse, toCollapse) &&
+      nearlyEqual(fromRadius, toRadius, 0.05) &&
+      nearlyEqual(fromStageW, toStageW) &&
+      nearlyEqual(fromExpandedW, expandedWidth)
 
     const settle = () => {
       barWidthRef.current = motion.offsetWidth
       groupRef.current = toolGroup
       minimizedRef.current = minimized
     }
-    const stop = () => {
-      cancelPlayback(playRef.current)
-      playRef.current = null
-    }
     const rest = () => {
-      stop()
-      clearMotionStyles(motion, nodes, collapseStage)
+      playRef.current = null
+      clearMotionStyles(motion, nodes, stage, collapseStage)
       settle()
     }
 
@@ -268,70 +381,132 @@ export const useToolbarGroupMotion = ({
       return
     }
 
-    stop()
-    motion.dataset.resizing = "true"
+    commitMotion(nodes, stage, collapseStage)
+    motion.dataset.resizing = collapseMotion ? "collapse" : "true"
     for (const node of Object.values(nodes)) {
       node.style.transition = "none"
-      node.style.willChange = "transform"
     }
-    applyPose(nodes, {
+    stage.style.transition = "none"
+    collapseStage.style.transition = "none"
+    nodes.track.style.willChange = "transform"
+    nodes.collapse.style.willChange = "transform"
+    if (collapseMotion) {
+      nodes.clip.style.willChange = "transform"
+      nodes.surface.style.willChange = "transform"
+    }
+    const fromPose = {
       scaleX: fromScale,
+      clipScale: fromClip,
+      radius: fromRadius,
       trailX: fromTrail,
       trackX: fromTrack,
       collapseX: fromCollapse,
-    })
+    }
+    const toPose = {
+      scaleX: toScale,
+      clipScale: toClip,
+      radius: toRadius,
+      trailX: 0,
+      trackX: toTrack,
+      collapseX: toCollapse,
+    }
+    applyPose(nodes, fromPose, collapseMotion)
+    if (groupSwitch) {
+      stage.style.width = `${fromStageW}px`
+      collapseStage.style.width = `${fromExpandedW}px`
+    }
+    void stage.offsetWidth
+    void collapseStage.offsetWidth
     void motion.offsetWidth
 
-    const animations = [
-      animateTransform(
-        nodes.chrome,
-        `scaleX(${fromScale})`,
-        `scaleX(${toScale})`,
+    animateTransform(
+      nodes.chrome,
+      `scaleX(${fromScale})`,
+      `scaleX(${toScale})`,
+      duration,
+      timing.easing,
+    )
+    animateTransform(
+      nodes.track,
+      `translateX(${fromTrack}px)`,
+      `translateX(${toTrack}px)`,
+      duration,
+      timing.easing,
+    )
+    animateTransform(
+      nodes.collapse,
+      `translateX(${fromCollapse}px)`,
+      `translateX(${toCollapse}px)`,
+      duration,
+      timing.easing,
+    )
+    if (groupSwitch) {
+      animateWidth(stage, fromStageW, toStageW, duration, timing.easing)
+      animateWidth(
+        collapseStage,
+        fromExpandedW,
+        expandedWidth,
         duration,
         timing.easing,
-      ),
-      animateTransform(
-        nodes.trailing,
-        `translateX(${fromTrail}px)`,
-        "translateX(0px)",
-        duration,
-        timing.easing,
-      ),
-      animateTransform(
-        nodes.track,
-        `translateX(${fromTrack}px)`,
-        `translateX(${toTrack}px)`,
-        duration,
-        timing.easing,
-      ),
-      animateTransform(
-        nodes.collapse,
-        `translateX(${fromCollapse}px)`,
-        `translateX(${toCollapse}px)`,
-        duration,
-        timing.easing,
-      ),
-    ]
-    playRef.current = { layoutWidth: toWidth, duration, animations }
+      )
+    }
+
+    playRef.current = {
+      layoutWidth: toWidth,
+      collapse: collapseMotion,
+      group: groupSwitch,
+      clipFrom: fromClip,
+      clipTo: toClip,
+      radiusFrom: fromRadius,
+      radiusTo: toRadius,
+    }
+
+    const needsFollow =
+      collapseMotion ||
+      (!groupSwitch && !nearlyEqual(fromScale, toScale, 0.002))
+    const followClip = () => {
+      const view = motion.ownerDocument.defaultView
+      const computed = view?.getComputedStyle.bind(view) ?? getComputedStyle
+      const chromeScale = transformScaleX(computed(nodes.chrome).transform)
+      const visual = lerp(
+        fromRadius,
+        toRadius,
+        progress(chromeScale, fromScale, toScale),
+      )
+      nodes.chrome.style.borderRadius = toolbarRadius(visual, chromeScale)
+      if (!collapseMotion) {
+        nodes.trailing.style.transform = `translateX(${toWidth * chromeScale - toWidth}px)`
+        return
+      }
+      nodes.clip.style.transform = `scaleX(${chromeScale})`
+      nodes.surface.style.transform = `scaleX(${contentScaleFor(chromeScale)})`
+      nodes.clip.style.borderRadius = toolbarRadius(visual, chromeScale)
+    }
+    let frame = 0
+    const stopFollow = () => {
+      if (frame) eventTarget.cancelAnimationFrame(frame)
+      frame = 0
+    }
+    if (needsFollow) {
+      followClip()
+      frame = eventTarget.requestAnimationFrame(function tick() {
+        followClip()
+        frame = eventTarget.requestAnimationFrame(tick)
+      })
+    }
 
     let finished = false
     const finish = () => {
-      if (finished) return
+      if (finished || gen !== genRef.current) return
       finished = true
-      applyPose(nodes, {
-        scaleX: toScale,
-        trailX: 0,
-        trackX: toTrack,
-        collapseX: toCollapse,
-      })
+      stopFollow()
+      applyPose(nodes, toPose, collapseMotion)
       rest()
-    }
-    for (const animation of animations) {
-      void animation.finished.then(finish, () => undefined)
     }
     const timeout = eventTarget.setTimeout(finish, duration + 32)
     return () => {
       eventTarget.clearTimeout(timeout)
+      stopFollow()
       if (finished) return
       const play = playRef.current
       if (!motion.isConnected) {
@@ -339,13 +514,16 @@ export const useToolbarGroupMotion = ({
         return
       }
       if (!play) {
-        clearMotionStyles(motion, nodes, collapseStage)
+        clearMotionStyles(motion, nodes, stage, collapseStage)
         return
       }
-      const pose = captureInterrupt(motion, nodes, play)
-      stop()
+      const pose = captureInterrupt(motion, nodes, stage, collapseStage, play)
+      commitMotion(nodes, stage, collapseStage)
+      stage.style.width = `${pose.stageW}px`
+      collapseStage.style.width = `${pose.expandedW}px`
       interruptRef.current = pose
-      applyPose(nodes, pose)
+      applyPose(nodes, pose, pose.collapse)
+      playRef.current = null
     }
   }, [
     annotatePanelRef,

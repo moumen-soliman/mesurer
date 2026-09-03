@@ -739,6 +739,7 @@ function ToolbarComponent(
       onMouseLeave={onToolbarLeave}
     >
     <div className="mesurer-toolbar-chrome" aria-hidden="true" />
+    <div className="mesurer-toolbar-clip">
     <div className="mesurer-toolbar-surface msr:flex msr:items-center">
        <div
          ref={collapseStageRef}
@@ -1130,6 +1131,7 @@ function ToolbarComponent(
       >
         <MesurerMarkIcon size={20} />
       </button>
+    </div>
     </div>
     </div>
     </div>

@@ -74,7 +74,10 @@
   display: block;
   width: max-content;
   max-width: 100%;
-  padding: 4px;
+  filter:
+    drop-shadow(0 0 0.4px rgba(0, 0, 0, 0.22))
+    drop-shadow(0 3px 8px rgba(0, 0, 0, 0.1))
+    drop-shadow(0 1px 3px rgba(0, 0, 0, 0.1));
 }
 
 .mesurer-toolbar-chrome {
@@ -87,15 +90,23 @@
   outline: 1px solid transparent;
   transform-origin: 0 50%;
   pointer-events: none;
-  box-shadow:
-    0 0 0.5px rgba(0, 0, 0, 0.18),
-    0 3px 8px rgba(0, 0, 0, 0.1),
-    0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.mesurer-toolbar-clip {
+  position: relative;
+  z-index: 1;
+  overflow: visible;
+  transform-origin: 0 50%;
+}
+
+.mesurer-toolbar-motion[data-resizing="collapse"] .mesurer-toolbar-clip {
+  overflow: hidden;
 }
 
 .mesurer-toolbar-surface {
   position: relative;
-  z-index: 1;
+  padding: 4px;
+  transform-origin: 0 50%;
 }
 
 .mesurer-toolbar-minimize-stage {
@@ -146,7 +157,7 @@
   pointer-events: auto;
 }
 
-.mesurer-toolbar-motion:not([data-resizing="true"])
+.mesurer-toolbar-motion:not([data-resizing="collapse"])
   .mesurer-toolbar-minimize-slot[data-slot="icon"]:not([data-open="true"]) {
   visibility: hidden;
 }
@@ -172,6 +183,10 @@
 
 .mesurer-toolbar-tool-stage:has([role="menu"]) {
   overflow: visible;
+}
+
+.mesurer-toolbar-motion[data-resizing="true"] .mesurer-toolbar-tool-stage {
+  overflow: hidden;
 }
 
 .mesurer-toolbar-tool-track {
@@ -200,7 +215,7 @@
   pointer-events: none;
 }
 
-.mesurer-toolbar-motion:not([data-resizing="true"])
+.mesurer-toolbar-motion:not([data-resizing])
   .mesurer-toolbar-tool-slot:not([data-open="true"]) {
   visibility: hidden;
 }
@@ -221,11 +236,15 @@
   position: relative;
   z-index: 1;
   flex: none;
+  isolation: isolate;
   background: #fff;
 }
 
 .mesurer-toolbar-tool-switch {
   position: relative;
+  z-index: 1;
+  isolation: isolate;
+  background: #fff;
 }
 
 .mesurer-toolbar-tool-switch-pill {
