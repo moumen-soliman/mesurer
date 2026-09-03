@@ -39,11 +39,20 @@ const isMesurerEventPath = (event: Event) =>
 
 export const installKeyboardGate = (
   view: Window = window,
-  { isolateMesurerEvents = false }: { isolateMesurerEvents?: boolean } = {},
+  {
+    isolateMesurerEvents = false,
+    isolationHostId,
+  }: { isolateMesurerEvents?: boolean; isolationHostId?: string } = {},
 ) => {
   const gated = view as GateWindow
   if (gated[INSTALLED]) return
   gated[INSTALLED] = true
+
+  const isIsolatedMesurerEvent = (event: Event) =>
+    !isolationHostId ||
+    event.composedPath().some(
+      (node) => node instanceof Element && node.id === isolationHostId,
+    )
 
   const blockPageKey = (event: Event) => {
     if (!ownsKeyboard(view)) {
@@ -51,6 +60,7 @@ export const installKeyboardGate = (
     }
     const mesurerEvent = isMesurerKeyboardEvent(event, view)
     if (mesurerEvent) {
+      if (isolateMesurerEvents && !isIsolatedMesurerEvent(event)) return
       if (!isolateMesurerEvents || isTypingInMesurer(event as KeyboardEvent, view)) {
         return
       }
@@ -183,7 +193,11 @@ export const installKeyboardGate = (
       const once = typeof options !== "boolean" && Boolean(options?.once)
       const signal = typeof options !== "boolean" ? options?.signal : undefined
       wrapped = function (this: EventTarget, event: Event) {
-        if (ownsKeyboard(view) && isMesurerEventPath(event)) {
+        if (
+          ownsKeyboard(view) &&
+          isMesurerEventPath(event) &&
+          isIsolatedMesurerEvent(event)
+        ) {
           if (once && !signal?.aborted) {
             nativeAddEventListener.call(this, type, wrapped!, options)
           }

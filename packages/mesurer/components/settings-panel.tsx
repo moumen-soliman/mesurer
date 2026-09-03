@@ -345,12 +345,47 @@ function ColorField({ label, value, fallback, ownerWindow, onChange }: {
   const [alphaDraft, setAlphaDraft] = useState(String(alphaValue))
   const [hexFocused, setHexFocused] = useState(false)
   const [alphaFocused, setAlphaFocused] = useState(false)
+  const nativeColorRef = useRef<HTMLInputElement>(null)
+  const hexInputRef = useRef<HTMLInputElement>(null)
+  const alphaInputRef = useRef<HTMLInputElement>(null)
   const updateColor = (nextHex: string, nextAlpha: number) => {
     if (!/^[\da-f]{6}$/i.test(nextHex)) return
     const nextSample = parseCssColor(`#${nextHex}`)
     if (!nextSample) return
     onChange(colorToHex({ ...nextSample, alpha: Math.min(100, Math.max(0, nextAlpha)) / 100 }))
   }
+  const handleNativeColorInput = (input: HTMLInputElement) => {
+    updateColor(input.value.slice(1), alphaValue)
+  }
+  const handleHexInput = (input: HTMLInputElement) => {
+    const next = input.value.replace(/[^\da-f]/gi, "").slice(0, 6).toUpperCase()
+    setHexDraft(next)
+    updateColor(next, alphaFocused ? Number(alphaDraft) : alphaValue)
+  }
+  const handleAlphaInput = (input: HTMLInputElement) => {
+    const next = input.value.replace(/\D/g, "").slice(0, 3)
+    setAlphaDraft(next)
+    updateColor(hexFocused ? hexDraft : hexValue, Number(next))
+  }
+
+  useLayoutEffect(() => {
+    const nativeColor = nativeColorRef.current
+    const hexInput = hexInputRef.current
+    const alphaInput = alphaInputRef.current
+    if (!nativeColor || !hexInput || !alphaInput) return
+
+    // Property handlers still run if an extension wraps delegated event listeners.
+    nativeColor.oninput = () => handleNativeColorInput(nativeColor)
+    nativeColor.onchange = () => handleNativeColorInput(nativeColor)
+    hexInput.oninput = () => handleHexInput(hexInput)
+    alphaInput.oninput = () => handleAlphaInput(alphaInput)
+    return () => {
+      nativeColor.oninput = null
+      nativeColor.onchange = null
+      hexInput.oninput = null
+      alphaInput.oninput = null
+    }
+  })
   const swatchColor =
     (ownerWindow as Window & { CSS?: { supports: (property: string, value: string) => boolean } }).CSS?.supports("color", value)
       ? value
@@ -366,29 +401,26 @@ function ColorField({ label, value, fallback, ownerWindow, onChange }: {
               style={{ backgroundColor: swatchColor }}
             >
               <input
+                ref={nativeColorRef}
                 type="color"
                 aria-label={`${label} color picker`}
                 value={inputValue}
                 className="msr:absolute msr:inset-0 msr:size-full msr:cursor-pointer msr:opacity-0"
-                onChange={(event) => onChange(event.target.value)}
               />
             </span>
             <input
+              ref={hexInputRef}
               aria-label={`${label} hex value`}
               type="text"
               value={hexFocused ? hexDraft : hexValue}
-              maxLength={6}
+              maxLength={7}
               className="msr:min-w-0 msr:flex-1 msr:bg-transparent msr:px-2 msr:font-mono msr:text-[12px] msr:tabular-nums msr:text-ink-700 msr:outline-none"
               onFocus={() => {
                 setHexDraft(hexValue)
                 setHexFocused(true)
               }}
               onBlur={() => setHexFocused(false)}
-              onChange={(event) => {
-                const next = event.target.value.replace(/[^\da-f]/gi, "").slice(0, 6).toUpperCase()
-                setHexDraft(next)
-                updateColor(next, alphaFocused ? Number(alphaDraft) : alphaValue)
-              }}
+              onChange={(event) => handleHexInput(event.currentTarget)}
               onPointerDown={(event) => event.stopPropagation()}
               onClick={(event) => event.stopPropagation()}
             />
@@ -396,6 +428,7 @@ function ColorField({ label, value, fallback, ownerWindow, onChange }: {
         }
         right={
           <input
+            ref={alphaInputRef}
             aria-label={`${label} opacity value`}
             type="text"
             inputMode="numeric"
@@ -407,11 +440,7 @@ function ColorField({ label, value, fallback, ownerWindow, onChange }: {
               setAlphaFocused(true)
             }}
             onBlur={() => setAlphaFocused(false)}
-            onChange={(event) => {
-              const next = event.target.value.replace(/\D/g, "").slice(0, 3)
-              setAlphaDraft(next)
-              updateColor(hexFocused ? hexDraft : hexValue, Number(next))
-            }}
+            onChange={(event) => handleAlphaInput(event.currentTarget)}
             onKeyDown={(event) => {
               if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return
               event.preventDefault()

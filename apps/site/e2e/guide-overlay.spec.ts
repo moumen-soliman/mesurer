@@ -736,6 +736,31 @@ test("falls back to the default swatch for an invalid persisted color", async ({
   );
 });
 
+test("settings color fields update hex and opacity values", async ({ page }) => {
+  await page.goto("/e2e/fixtures/guide-overlay.html");
+  await page.getByRole("button", { name: "Settings" }).click();
+
+  const selection = page.getByRole("region", { name: "Selection settings" });
+  const hex = selection.getByRole("textbox", { name: "Color hex value" });
+  const opacity = selection.getByRole("textbox", { name: "Color opacity value" });
+  const nativeColor = selection.getByLabel("Color color picker");
+
+  await hex.fill("#FF0000");
+  await expect(hex).toHaveValue("FF0000");
+  await expect(nativeColor).toHaveValue("#ff0000");
+
+  await opacity.fill("50");
+  await expect(opacity).toHaveValue("50%");
+  await expect(hex).toHaveValue("FF0000");
+
+  await nativeColor.evaluate((input: HTMLInputElement) => {
+    input.value = "#00ff00";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  await expect(hex).toHaveValue("00FF00");
+  await expect(opacity).toHaveValue("50%");
+});
+
 test("P opens the native color picker", async ({ page }) => {
   await page.addInitScript(() => {
     class MockEyeDropper {
@@ -978,6 +1003,37 @@ test("color format multi-select supports keyboard navigation", async ({ page }) 
 
   await page.keyboard.press("Escape");
   await expect(trigger).toBeFocused();
+});
+
+test("color picker settings apply selected and copy formats", async ({ page }) => {
+  await page.addInitScript(() => {
+    class MockEyeDropper {
+      open() {
+        return Promise.resolve({ sRGBHex: "#ff0000" });
+      }
+    }
+    (window as Window & { EyeDropper?: typeof MockEyeDropper }).EyeDropper = MockEyeDropper;
+  });
+  await page.goto("/e2e/fixtures/guide-overlay.html");
+  await page.getByRole("button", { name: "Settings" }).click();
+
+  const colorSettings = page.getByRole("region", { name: "Color settings" });
+  const formats = colorSettings.getByRole("combobox", { name: "Color formats" });
+  await formats.click();
+  const formatOptions = colorSettings.getByRole("listbox", { name: "Color formats" });
+  await formatOptions.getByRole("option", { name: "rgb" }).click();
+  await formatOptions.getByRole("option", { name: "oklch" }).click();
+  await formatOptions.getByRole("option", { name: "hsl" }).click();
+  await colorSettings.getByRole("combobox", { name: "Copy" }).selectOption("hsl");
+
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Sample color (P)" }).click();
+
+  const picker = page.locator(".mesurer-color-picker");
+  await expect(picker).toContainText("hsl");
+  await expect(picker).toContainText("#ff0000");
+  await expect(picker).not.toContainText("rgb");
+  await expect(picker).not.toContainText("oklch");
 });
 
 test("guide sliders do not drag the toolbar", async ({ page }) => {

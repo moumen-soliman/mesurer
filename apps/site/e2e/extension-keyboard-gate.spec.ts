@@ -80,6 +80,7 @@ test("extension keyboard gate isolates Mesurer and bridges page-editor shortcuts
   await page.goto("about:blank");
   await page.evaluate(() => {
     const host = document.createElement("div");
+    host.id = "mesurer-extension-host";
     const shadow = host.attachShadow({ mode: "open" });
     const root = document.createElement("div");
     root.className = "mesurer-root";
@@ -124,7 +125,7 @@ test("extension keyboard gate isolates Mesurer and bridges page-editor shortcuts
     const toolbar = document.createElement("button");
     toolbar.type = "button";
     toolbar.className = "mesurer-root";
-    document.body.append(toolbar);
+    editor.parentElement?.append(toolbar);
     toolbar.dispatchEvent(
       new KeyboardEvent("keydown", {
         bubbles: true,
@@ -211,4 +212,46 @@ test("extension keyboard gate isolates Mesurer and bridges page-editor shortcuts
   expect(result.pageInputEvents).toBe(0);
   expect(result.bridgedEvents).toBe(4);
   expect(result.releasedPageListenerEvents).toBe(2);
+});
+
+test("extension keyboard gate leaves embedded Mesurer inputs interactive", async ({
+  page,
+}) => {
+  await page.goto("about:blank");
+  await page.addScriptTag({ path: extensionGate });
+
+  const result = await page.evaluate(() => {
+    const appRoot = document.createElement("div");
+    const mesurer = document.createElement("div");
+    mesurer.className = "mesurer-root";
+    const input = document.createElement("input");
+    mesurer.append(input);
+    appRoot.append(mesurer);
+    document.body.append(appRoot);
+    document.documentElement.setAttribute("data-mesurer-keyboard-owned", "1");
+
+    const received: string[] = [];
+    for (const type of ["input", "copy", "paste", "keydown"]) {
+      appRoot.addEventListener(type, () => received.push(type));
+    }
+
+    input.focus();
+    input.value = "#00aaff";
+    input.dispatchEvent(new InputEvent("input", {
+      bubbles: true,
+      inputType: "insertText",
+    }));
+    input.dispatchEvent(new ClipboardEvent("copy", { bubbles: true }));
+    input.dispatchEvent(new ClipboardEvent("paste", { bubbles: true }));
+    input.dispatchEvent(new KeyboardEvent("keydown", {
+      bubbles: true,
+      key: "c",
+      code: "KeyC",
+      metaKey: true,
+    }));
+
+    return received;
+  });
+
+  expect(result).toEqual(["input", "copy", "paste", "keydown"]);
 });
