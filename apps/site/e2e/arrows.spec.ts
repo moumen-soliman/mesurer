@@ -258,6 +258,23 @@ test("switches to Select after drawing an arrow", async ({ page }) => {
   await expect(arrow).toHaveAttribute("d", "M 210 210 Q 310 260 410 310");
 });
 
+test("keeps tool group shortcuts working after drawing an arrow", async ({ page }) => {
+  await page.goto("/e2e/fixtures/guide-overlay.html");
+  await activateArrows(page);
+  await drawArrow(page);
+
+  await page.keyboard.press("Shift+2");
+  await expect(page.locator(".mesurer-toolbar-tool-switch")).toHaveAttribute(
+    "data-value",
+    "annotate",
+  );
+  await page.keyboard.press("Shift+1");
+  await expect(page.locator(".mesurer-toolbar-tool-switch")).toHaveAttribute(
+    "data-value",
+    "inspect",
+  );
+});
+
 test("selects an arrow from the expanded shaft touch zone", async ({ page }) => {
   await page.goto("/e2e/fixtures/guide-overlay.html");
   await activateArrows(page);

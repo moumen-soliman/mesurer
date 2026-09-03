@@ -1,8 +1,10 @@
 import type { Dispatch, SetStateAction } from "react"
 import { useLayoutEffect, useRef } from "react"
 import {
+  getMesurerToolGroupShortcut,
   isInsideMesurer,
   isMesurerKeyboardBridge,
+  isMesurerKeyboardBridgeKey,
   isMesurerKeyboardOwned,
   isOverlayEscapeConsumed,
   isTypingInMesurer,
@@ -11,9 +13,44 @@ import {
 import type { ToolMode } from "../core/types"
 
 const DOUBLE_ESCAPE_MS = 1000
+const SHORTCUT_TOOL_MODES: Partial<Record<string, ToolMode>> = {
+  a: "text-inspector",
+  d: "arrows",
+  g: "guides",
+  i: "select",
+  n: "pen",
+  s: "selection",
+  t: "text",
+}
 
 const isEscapeKey = (event: KeyboardEvent) =>
   event.key === "Escape" || event.code === "Escape"
+
+const keyboardEventSignature = (
+  eventType: "keydown" | "keyup",
+  event: Pick<
+    KeyboardEvent,
+    | "key"
+    | "code"
+    | "location"
+    | "repeat"
+    | "altKey"
+    | "ctrlKey"
+    | "metaKey"
+    | "shiftKey"
+  >,
+) =>
+  [
+    eventType,
+    event.key,
+    event.code,
+    event.location,
+    event.repeat,
+    event.altKey,
+    event.ctrlKey,
+    event.metaKey,
+    event.shiftKey,
+  ].join(":")
 
 type HotkeyOptions = {
   eventTarget: Window
@@ -69,6 +106,7 @@ export const useHotkeys = (options: HotkeyOptions) => {
   const optionsRef = useRef(options)
   optionsRef.current = options
   const lastEscapeAtRef = useRef<number | null>(null)
+  const nativeKeyboardEventsRef = useRef(new Map<string, number>())
 
   useLayoutEffect(() => {
     const target = options.eventTarget
@@ -76,6 +114,12 @@ export const useHotkeys = (options: HotkeyOptions) => {
     const handleKeyDown = (event: KeyboardEvent, bridged = false) => {
       if (seen.has(event)) return
       seen.add(event)
+      if (!bridged && isMesurerKeyboardBridgeKey(event.key, event)) {
+        nativeKeyboardEventsRef.current.set(
+          keyboardEventSignature("keydown", event),
+          performance.now(),
+        )
+      }
       const current = optionsRef.current
       if (
         !bridged &&
@@ -191,6 +235,7 @@ export const useHotkeys = (options: HotkeyOptions) => {
       }
 
       const key = event.key.toLowerCase()
+      const toolGroupShortcut = getMesurerToolGroupShortcut(event)
       if (event.altKey) return
 
       if (key === "p") {
@@ -220,7 +265,9 @@ export const useHotkeys = (options: HotkeyOptions) => {
         return
       }
 
-      if (key === "1" || key === "2") {
+      if (toolGroupShortcut) {
+        event.preventDefault()
+        event.stopImmediatePropagation()
         current.onInteract()
         current.clearTransientState()
         current.setEnabled(true)
@@ -228,61 +275,22 @@ export const useHotkeys = (options: HotkeyOptions) => {
         current.onCloseScreenshot()
         current.setXrayVisible(false)
         current.setRulersVisible(false)
-        current.setToolMode(key === "1" ? "select" : "selection")
+        current.setToolMode(toolGroupShortcut === "1" ? "select" : "selection")
         return
       }
 
       if (current.isOverlayActive()) {
-        if (key === "a" && !hasPrimaryModifier) {
+        const requestedToolMode = SHORTCUT_TOOL_MODES[key]
+        if (requestedToolMode) {
+          event.preventDefault()
+          event.stopImmediatePropagation()
           current.onInteract()
           current.clearTransientState()
           current.onCloseScreenshot()
           current.setToolMode((prev) =>
-            prev === "text-inspector" ? "none" : "text-inspector",
+            prev === requestedToolMode ? "none" : requestedToolMode,
           )
           return
-        }
-
-        if (key === "i") {
-          current.onInteract()
-          current.clearTransientState()
-          current.onCloseScreenshot()
-          current.setToolMode((prev) => (prev === "select" ? "none" : "select"))
-        }
-
-        if (key === "s") {
-          current.onInteract()
-          current.clearTransientState()
-          current.onCloseScreenshot()
-          current.setToolMode((prev) => (prev === "selection" ? "none" : "selection"))
-        }
-
-        if (key === "g") {
-          current.onInteract()
-          current.clearTransientState()
-          current.onCloseScreenshot()
-          current.setToolMode((prev) => (prev === "guides" ? "none" : "guides"))
-        }
-
-        if (key === "d") {
-          current.onInteract()
-          current.clearTransientState()
-          current.onCloseScreenshot()
-          current.setToolMode((prev) => (prev === "arrows" ? "none" : "arrows"))
-        }
-
-        if (key === "n") {
-          current.onInteract()
-          current.clearTransientState()
-          current.onCloseScreenshot()
-          current.setToolMode((prev) => (prev === "pen" ? "none" : "pen"))
-        }
-
-        if (key === "t") {
-          current.onInteract()
-          current.clearTransientState()
-          current.onCloseScreenshot()
-          current.setToolMode((prev) => (prev === "text" ? "none" : "text"))
         }
 
         if (key === "h") {
@@ -306,6 +314,12 @@ export const useHotkeys = (options: HotkeyOptions) => {
     }
 
     const handleKeyUp = (event: KeyboardEvent, bridged = false) => {
+      if (!bridged && isMesurerKeyboardBridgeKey(event.key, event)) {
+        nativeKeyboardEventsRef.current.set(
+          keyboardEventSignature("keyup", event),
+          performance.now(),
+        )
+      }
       if (!bridged && isTypingInPage(target) && !isMesurerKeyboardOwned(target)) return
       if (event.key === "Alt") {
         optionsRef.current.setAltPressed(false)
@@ -320,6 +334,15 @@ export const useHotkeys = (options: HotkeyOptions) => {
       ) return
       const data = event.data
       if (!isMesurerKeyboardBridge(data)) return
+      const signature = keyboardEventSignature(data.eventType, data)
+      const nativeEventAt = nativeKeyboardEventsRef.current.get(signature)
+      if (
+        nativeEventAt !== undefined &&
+        performance.now() - nativeEventAt < 250
+      ) {
+        nativeKeyboardEventsRef.current.delete(signature)
+        return
+      }
       const bridged = new KeyboardEvent(data.eventType, {
         key: data.key,
         code: data.code,

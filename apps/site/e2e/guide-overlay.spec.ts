@@ -29,13 +29,13 @@ test("does not run shortcuts while typing in a page field", async ({ page }) => 
 test("programmatic page focus releases Mesurer keyboard ownership", async ({ page }) => {
   await page.goto("/e2e/fixtures/guide-overlay.html");
   await page.getByRole("button", { name: "Inspect (I)" }).click();
-  await expect(page.locator("html")).toHaveAttribute("data-mesurer-kb", "1");
+  await expect(page.locator("html")).toHaveAttribute("data-mesurer-keyboard-owned", "1");
 
   const field = page.getByLabel("Page field");
   await field.evaluate((element) => (element as HTMLInputElement).focus());
 
   await expect(field).toBeFocused();
-  await expect(page.locator("html")).not.toHaveAttribute("data-mesurer-kb");
+  await expect(page.locator("html")).not.toHaveAttribute("data-mesurer-keyboard-owned");
   await field.pressSequentially("Programmatic focus works");
   await expect(field).toHaveValue("Programmatic focus works");
 });
@@ -319,6 +319,78 @@ test("switches tool groups with global commands and defaults", async ({ page }) 
   await expect(page.getByRole("button", { name: "Inspect (I)" })).toHaveAttribute(
     "aria-pressed",
     "true",
+  );
+});
+
+test("switches tool groups when a Mesurer control has focus", async ({ page }) => {
+  await page.goto("/e2e/fixtures/guide-overlay.html");
+  await page.getByRole("button", { name: "Inspect (I)" }).focus();
+
+  await page.keyboard.press("2");
+  await expect(page.locator(".mesurer-toolbar-tool-switch")).toHaveAttribute(
+    "data-value",
+    "annotate",
+  );
+
+  await page.keyboard.press("1");
+  await expect(page.locator(".mesurer-toolbar-tool-switch")).toHaveAttribute(
+    "data-value",
+    "inspect",
+  );
+});
+
+test("handles a native and bridged tool shortcut only once", async ({ page }) => {
+  await page.goto("/e2e/fixtures/guide-overlay.html");
+  await page.getByRole("button", { name: "Settings" }).click();
+  await page.keyboard.press("Escape");
+
+  await page.evaluate(() => {
+    const init = {
+      key: "d",
+      code: "KeyD",
+      location: 0,
+      repeat: false,
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    };
+    window.dispatchEvent(new KeyboardEvent("keydown", init));
+    window.postMessage(
+      {
+        type: "__MESURER_KEYBOARD_BRIDGE__",
+        eventType: "keydown",
+        ...init,
+      },
+      location.origin,
+    );
+  });
+
+  await expect(page.getByRole("button", { name: "Arrows (D)" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Arrows (D)" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+});
+
+test("switches tool groups with number-row keys on an AZERTY layout", async ({ page }) => {
+  await page.goto("/e2e/fixtures/guide-overlay.html");
+  const inspect = page.getByRole("button", { name: "Inspect (I)" });
+  await inspect.focus();
+
+  await inspect.dispatchEvent("keydown", { key: "é", code: "" });
+  await expect(page.locator(".mesurer-toolbar-tool-switch")).toHaveAttribute(
+    "data-value",
+    "annotate",
+  );
+
+  await page.getByRole("button", { name: "Select (S)" }).dispatchEvent("keydown", {
+    key: "&",
+    code: "",
+  });
+  await expect(page.locator(".mesurer-toolbar-tool-switch")).toHaveAttribute(
+    "data-value",
+    "inspect",
   );
 });
 
@@ -1319,6 +1391,19 @@ test("toolbar tools remain usable when a page prompt refocuses itself", async ({
   await prompt.click();
   await prompt.pressSequentially("Still editable");
   await expect(prompt).toHaveValue("Still editable");
+});
+
+test("tool group shortcuts remain usable after clicking the page", async ({ page }) => {
+  await page.goto("/e2e/fixtures/guide-overlay.html");
+  await page.getByRole("button", { name: "Annotate tools (2)" }).click();
+  await page.getByRole("button", { name: "Arrows (D)" }).click();
+  await page.mouse.click(420, 180);
+
+  await page.keyboard.press("1");
+  await expect(page.locator(".mesurer-toolbar-tool-switch")).toHaveAttribute(
+    "data-value",
+    "inspect",
+  );
 });
 
 test("Text editor keeps focus when a page prompt refocuses itself", async ({ page }) => {

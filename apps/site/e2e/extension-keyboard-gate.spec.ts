@@ -7,6 +7,73 @@ const extensionGate = resolve(
   "../../extension/dist/keyboard-gate.js",
 );
 
+test("bridges shifted tool group shortcuts after an overlay interaction", async ({
+  page,
+}) => {
+  await page.addInitScript({ path: extensionGate });
+  await page.goto("/e2e/fixtures/guide-overlay.html");
+  await page.getByRole("button", { name: "Annotate tools (2)" }).click();
+  await page.getByRole("button", { name: "Arrows (D)" }).click();
+  await page.mouse.move(120, 160);
+  await page.mouse.down();
+  await page.mouse.move(320, 260, { steps: 5 });
+  await page.mouse.up();
+
+  await page.keyboard.press("Shift+1");
+  await expect(page.locator(".mesurer-toolbar-tool-switch")).toHaveAttribute(
+    "data-value",
+    "inspect",
+  );
+  await page.keyboard.press("Shift+2");
+  await expect(page.locator(".mesurer-toolbar-tool-switch")).toHaveAttribute(
+    "data-value",
+    "annotate",
+  );
+
+  await page.keyboard.press("t");
+  const text = page.getByRole("button", { name: "Text (T)" });
+  await expect(text).toBeVisible();
+  await expect(text).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await page.keyboard.press("g");
+  const guides = page.getByRole("button", { name: "Guides (G)" });
+  await expect(guides).toBeVisible();
+  await expect(guides).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await page.keyboard.press("d");
+  const arrows = page.getByRole("button", { name: "Arrows (D)" });
+  await expect(arrows).toBeVisible();
+  await expect(arrows).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+});
+
+test("selects cross-group tools after using Settings", async ({ page }) => {
+  await page.addInitScript({ path: extensionGate });
+  await page.goto("/e2e/fixtures/guide-overlay.html");
+  await page.getByRole("button", { name: "Settings" }).click();
+  await page.keyboard.press("Escape");
+
+  await page.keyboard.press("t");
+  await expect(page.getByRole("button", { name: "Text (T)" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Text (T)" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+
+  await page.keyboard.press("i");
+  await expect(page.getByRole("button", { name: "Inspect (I)" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Inspect (I)" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+});
+
 test("extension keyboard gate isolates Mesurer and bridges page-editor shortcuts", async ({
   page,
 }) => {
@@ -53,7 +120,7 @@ test("extension keyboard gate isolates Mesurer and bridges page-editor shortcuts
       if (event.data?.type === "__MESURER_KEYBOARD_BRIDGE__") state.bridgedEvents += 1;
     });
 
-    document.documentElement.setAttribute("data-mesurer-kb", "1");
+    document.documentElement.setAttribute("data-mesurer-keyboard-owned", "1");
     const toolbar = document.createElement("button");
     toolbar.type = "button";
     toolbar.className = "mesurer-root";
@@ -78,15 +145,24 @@ test("extension keyboard gate isolates Mesurer and bridges page-editor shortcuts
     );
     const afterEditor = { ...state };
 
-    document.documentElement.removeAttribute("data-mesurer-kb");
+    document.documentElement.removeAttribute("data-mesurer-keyboard-owned");
     prompt.focus();
-    document.documentElement.setAttribute("data-mesurer-kb", "1");
+    document.documentElement.setAttribute("data-mesurer-keyboard-owned", "1");
     prompt.dispatchEvent(
       new KeyboardEvent("keydown", {
         bubbles: true,
         composed: true,
         key: "t",
         code: "KeyT",
+      }),
+    );
+    prompt.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        bubbles: true,
+        composed: true,
+        key: "1",
+        code: "Digit1",
+        shiftKey: true,
       }),
     );
     prompt.dispatchEvent(
@@ -110,7 +186,7 @@ test("extension keyboard gate isolates Mesurer and bridges page-editor shortcuts
     await new Promise((resolve) => setTimeout(resolve, 0));
     const owned = { ...afterEditor };
 
-    document.documentElement.removeAttribute("data-mesurer-kb");
+    document.documentElement.removeAttribute("data-mesurer-keyboard-owned");
     prompt.dispatchEvent(
       new KeyboardEvent("keydown", {
         bubbles: true,
@@ -133,6 +209,6 @@ test("extension keyboard gate isolates Mesurer and bridges page-editor shortcuts
   expect(result.afterToolbar.pageListenerEvents).toBe(0);
   expect(result.owned.pageListenerEvents).toBe(1);
   expect(result.pageInputEvents).toBe(0);
-  expect(result.bridgedEvents).toBe(3);
+  expect(result.bridgedEvents).toBe(4);
   expect(result.releasedPageListenerEvents).toBe(2);
 });

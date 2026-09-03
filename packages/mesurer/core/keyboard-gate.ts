@@ -9,7 +9,7 @@ import {
   MESURER_KEYBOARD_ATTR,
 } from "./keyboard-ownership"
 
-const INSTALLED = "__MESURER_KEYBOARD_GATE__"
+const INSTALLED = "__MESURER_KEYBOARD_GATE_V2__"
 
 type GateWindow = Window & { [INSTALLED]?: boolean }
 

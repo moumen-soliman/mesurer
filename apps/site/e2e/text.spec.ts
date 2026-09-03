@@ -36,6 +36,25 @@ test("writes text anywhere on the page", async ({ page }) => {
   await expect(page.locator('[data-mesurer-text-id]')).toHaveAttribute("data-mesurer-text-id", /.+/);
 });
 
+test("keeps tool group shortcuts working after writing text", async ({ page }) => {
+  await page.goto("/e2e/fixtures/guide-overlay.html");
+  await activateText(page);
+  await page.mouse.click(220, 180);
+  await page.getByRole("textbox", { name: "Text annotation" }).fill("Review this");
+  await page.keyboard.press("Escape");
+
+  await page.keyboard.press("1");
+  await expect(page.locator(".mesurer-toolbar-tool-switch")).toHaveAttribute(
+    "data-value",
+    "inspect",
+  );
+  await page.keyboard.press("2");
+  await expect(page.locator(".mesurer-toolbar-tool-switch")).toHaveAttribute(
+    "data-value",
+    "annotate",
+  );
+});
+
 test("activates text with T and Escape cancels the draft", async ({ page }) => {
   await page.goto("/e2e/fixtures/guide-overlay.html");
   await activateText(page);

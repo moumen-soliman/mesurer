@@ -1,4 +1,5 @@
-export const MESURER_KEYBOARD_ATTR = "data-mesurer-kb"
+export const MESURER_KEYBOARD_ATTR = "data-mesurer-keyboard-owned"
+const LEGACY_MESURER_KEYBOARD_ATTR = "data-mesurer-kb"
 export const MESURER_KEYBOARD_BRIDGE = "__MESURER_KEYBOARD_BRIDGE__"
 
 type MesurerKeyboardBridgeEvent = {
@@ -37,21 +38,55 @@ const MESURER_BRIDGED_KEYS = new Set([
 
 const MESURER_MODIFIED_KEYS = new Set([",", "a", "z"])
 
+export const getMesurerToolGroupShortcut = ({
+  key,
+  code,
+}: Pick<MesurerKeyboardBridgeEvent, "key" | "code">) => {
+  if (
+    key === "1" ||
+    key === "!" ||
+    key === "&" ||
+    code === "Digit1" ||
+    code === "Numpad1"
+  ) {
+    return "1"
+  }
+  if (
+    key === "2" ||
+    key === "@" ||
+    key === "é" ||
+    code === "Digit2" ||
+    code === "Numpad2"
+  ) {
+    return "2"
+  }
+  return null
+}
+
 export const isMesurerKeyboardBridgeKey = (
   key: string,
   modifiers: Pick<
     MesurerKeyboardBridgeEvent,
     "altKey" | "ctrlKey" | "metaKey" | "shiftKey"
-  >,
-) =>
-  !modifiers.altKey &&
-  ((MESURER_BRIDGED_KEYS.has(key.toLowerCase()) &&
-    !modifiers.ctrlKey &&
-    !modifiers.metaKey &&
-    !modifiers.shiftKey) ||
-    (MESURER_MODIFIED_KEYS.has(key.toLowerCase()) &&
-      (modifiers.ctrlKey || modifiers.metaKey) &&
-      (key.toLowerCase() === "z" || !modifiers.shiftKey)))
+  > &
+    Partial<Pick<MesurerKeyboardBridgeEvent, "code">>,
+) => {
+  const toolGroupShortcut = getMesurerToolGroupShortcut({
+    key,
+    code: modifiers.code ?? "",
+  })
+  return (
+    !modifiers.altKey &&
+    ((Boolean(toolGroupShortcut) && !modifiers.ctrlKey && !modifiers.metaKey) ||
+      (MESURER_BRIDGED_KEYS.has(key.toLowerCase()) &&
+        !modifiers.ctrlKey &&
+        !modifiers.metaKey &&
+        !modifiers.shiftKey) ||
+      (MESURER_MODIFIED_KEYS.has(key.toLowerCase()) &&
+        (modifiers.ctrlKey || modifiers.metaKey) &&
+        (key.toLowerCase() === "z" || !modifiers.shiftKey)))
+  )
+}
 
 export const isMesurerKeyboardBridge = (
   value: unknown,
@@ -70,6 +105,7 @@ export const isMesurerKeyboardBridge = (
     typeof event.metaKey === "boolean" &&
     typeof event.shiftKey === "boolean" &&
     isMesurerKeyboardBridgeKey(event.key, {
+      code: event.code,
       altKey: event.altKey ?? false,
       ctrlKey: event.ctrlKey ?? false,
       metaKey: event.metaKey ?? false,
@@ -152,6 +188,7 @@ export const isBrowserReservedChord = (event: KeyboardEvent) => {
 }
 
 export const setMesurerKeyboardOwned = (document: Document, owned: boolean) => {
+  document.documentElement.removeAttribute(LEGACY_MESURER_KEYBOARD_ATTR)
   if (owned) document.documentElement.setAttribute(MESURER_KEYBOARD_ATTR, "1")
   else document.documentElement.removeAttribute(MESURER_KEYBOARD_ATTR)
 }

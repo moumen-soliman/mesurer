@@ -54,8 +54,8 @@ export const useOverlayKeyboard = ({
         setMesurerKeyboardOwned(eventTarget.document, true)
         return
       }
-      claimedRef.current = false
-      setMesurerKeyboardOwned(eventTarget.document, false)
+      claimedRef.current = true
+      setMesurerKeyboardOwned(eventTarget.document, true)
     }
     eventTarget.document.addEventListener("focusin", onFocusIn, true)
     eventTarget.document.addEventListener("pointerdown", onPointerDown, true)
