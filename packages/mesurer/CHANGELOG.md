@@ -1,5 +1,10 @@
 # mesurer
 
+## 0.1.4
+
+- inject extension scripts only after the user activates the extension
+- remove the global `<all_urls>` keyboard-gate injection to avoid interfering with embedded Mesurer instances
+
 ## 0.1.3
 
 - fix color settings input, copy, and paste updates in embedded apps and the Chrome extension
