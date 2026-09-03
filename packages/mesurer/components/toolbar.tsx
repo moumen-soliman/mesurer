@@ -1122,7 +1122,7 @@ function ToolbarComponent(
         ref={iconSlotRef}
         type="button"
         aria-label="Show Mesurer toolbar"
-        className="msr:flex msr:size-8 msr:select-none msr:items-center msr:justify-center msr:rounded-[8px] msr:text-black msr:outline-none msr:hover:bg-black/4"
+        className="mesurer-toolbar-restore msr:flex msr:size-8 msr:select-none msr:items-center msr:justify-center msr:rounded-[8px] msr:text-black msr:outline-none msr:hover:bg-black/4"
         onClick={(event) => {
           if (event.defaultPrevented || consumeDragClick()) return;
           onRestore();

@@ -151,6 +151,10 @@
   visibility: hidden;
 }
 
+.mesurer-toolbar-restore svg {
+  transform: translate(-1.5px, -0.5px);
+}
+
 .mesurer-toolbar-tool-stage {
   flex: none;
   min-width: 0;

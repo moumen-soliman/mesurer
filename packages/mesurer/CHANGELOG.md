@@ -1,5 +1,13 @@
 # mesurer
 
+## 0.1.2
+
+- add configurable keyboard shortcuts and toolbar minimization
+- improve keyboard shortcut reliability in host-page editors and browser prompts
+- preserve Text-tool typing, paste, IME input, and host-page focus
+- fix annotation deletion with Backspace/Delete after a page editor has focus
+- improve Chrome extension keyboard isolation and focus handoff
+
 ## 0.1.1
 
 - add grouped Select & Inspect and Annotate toolbars
