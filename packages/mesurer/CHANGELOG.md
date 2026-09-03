@@ -7,6 +7,8 @@
 - preserve Text-tool typing, paste, IME input, and host-page focus
 - fix annotation deletion with Backspace/Delete after a page editor has focus
 - improve Chrome extension keyboard isolation and focus handoff
+- fix interruptible toolbar motion when switching inspect/annotate or minimizing
+- stretch toolbar separators to the pill edges
 
 ## 0.1.1
 
