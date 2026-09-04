@@ -210,7 +210,7 @@ export const useToolbarGroupMotion = ({
   inspectPanelRef: RefObject<HTMLDivElement | null>
   annotatePanelRef: RefObject<HTMLDivElement | null>
   expandedPanelRef: RefObject<HTMLDivElement | null>
-  iconSlotRef: RefObject<HTMLButtonElement | null>
+  iconSlotRef: RefObject<HTMLDivElement | null>
 }) => {
   const readyRef = useRef(false)
   const barWidthRef = useRef(0)

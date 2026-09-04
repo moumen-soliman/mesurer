@@ -105,7 +105,7 @@
 
 .mesurer-toolbar-surface {
   position: relative;
-  padding: 4px;
+  padding: 0;
   transform-origin: 0 50%;
 }
 
@@ -113,7 +113,7 @@
   flex: none;
   width: 1px;
   align-self: stretch;
-  margin-block: -4px;
+  margin: 0;
   background: var(--color-ink-200);
 }
 
@@ -159,7 +159,7 @@
 }
 
 .mesurer-toolbar-minimize-slot[data-slot="icon"] {
-  width: var(--msr-icon-w, auto);
+  width: auto;
 }
 
 .mesurer-toolbar-minimize-slot:not([data-open="true"]) {
@@ -250,6 +250,7 @@
   z-index: 1;
   flex: none;
   isolation: isolate;
+  border-radius: 0 12px 12px 0;
   background: #fff;
 }
 

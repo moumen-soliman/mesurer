@@ -219,7 +219,7 @@ function ToolbarGroup({
     <div
       role="group"
       aria-label={label}
-      className={cn("msr:flex msr:items-center msr:gap-1", className)}
+      className={cn("msr:flex msr:items-center msr:gap-1 msr:py-1", className)}
     >
       {children}
     </div>
@@ -307,7 +307,7 @@ function ToolbarComponent(
   const trailingRef = useRef<HTMLDivElement | null>(null);
   const collapseStageRef = useRef<HTMLDivElement | null>(null);
   const expandedPanelRef = useRef<HTMLDivElement | null>(null);
-  const iconSlotRef = useRef<HTMLButtonElement | null>(null);
+  const iconSlotRef = useRef<HTMLDivElement | null>(null);
   const { markReady: markToolbarMotionReady } = useToolbarGroupMotion({
     eventTarget,
     toolGroup,
@@ -754,7 +754,7 @@ function ToolbarComponent(
          aria-hidden={minimized}
          inert={minimized ? true : undefined}
        >
-       <div ref={expandedPanelRef} className="msr:flex msr:w-max msr:items-stretch msr:gap-1">
+        <div ref={expandedPanelRef} className="msr:flex msr:w-max msr:items-stretch msr:gap-1 msr:pl-1">
        <ToolGroupSwitch
          value={toolGroup}
          onChange={selectToolGroup}
@@ -1033,7 +1033,7 @@ function ToolbarComponent(
        </div>
        <div ref={trailingRef} className="mesurer-toolbar-trailing msr:flex msr:items-stretch">
        <ToolbarDivider />
-       <ToolbarGroup label="Capture and settings" className="msr:px-1">
+        <ToolbarGroup label="Capture and settings" className="msr:px-1">
       <div className="msr:relative">
       <ToolbarButton
         id="screenshot"
@@ -1113,14 +1113,14 @@ function ToolbarComponent(
     </div>
     </div>
     <div
-      className="mesurer-toolbar-minimize-slot"
+      ref={iconSlotRef}
+       className="mesurer-toolbar-minimize-slot msr:px-1 msr:py-1"
       data-slot="icon"
       data-open={minimized}
       aria-hidden={!minimized}
       inert={!minimized ? true : undefined}
     >
       <button
-        ref={iconSlotRef}
         type="button"
         aria-label="Show Mesurer toolbar"
         className="mesurer-toolbar-restore msr:flex msr:size-8 msr:select-none msr:items-center msr:justify-center msr:rounded-[8px] msr:text-black msr:outline-none msr:hover:bg-black/4"
